@@ -45,6 +45,9 @@ The CSV output consists of the following fields:
 | `RunAutomatically` | Indicates if the job runs automatically based on its configuration.       |
 | `IsRunning`        | (Optional, with `-Stat`) Indicates if the job is running.                 |
 | `LastRun`          | (Optional, with `-Stat`) Timestamp of the last run.                      |
+| `SessionStart`     | (Optional, with `-Stat`) Exact start timestamp of the last session.       |
+| `SessionEnd`       | (Optional, with `-Stat`) Exact end timestamp of the last session.         |
+| `Duration`         | (Optional, with `-Stat`) Duration of the session.                         |
 | `LastResult`       | (Optional, with `-Stat`) Result of the last job run.                      |
 | `DailyStartTime`   | Configured daily start time (if applicable).                              |
 | `Periodically`     | Interval for periodic execution (if applicable).                         |
