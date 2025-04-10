@@ -4,7 +4,7 @@
 
  .DESCRIPTION
   Output Job List to a CSV file.
-  Version: 0.2.4
+  Version: 0.2.5
 
   The output CSV consists of following fields.
   
@@ -39,6 +39,12 @@
   
   *LastRun
     The most recent start time of the Job.
+  
+  *SessionStart and SessionEnd
+    The exact start and end time obtained by looking up the session information.
+  
+  *Duration
+    The duration of the job calculated from SessionStart and SessionEnd.
   
   *LastResult
     Result of the LastRun.
@@ -116,6 +122,22 @@ function Get-JobData {
         [string]$Type
     )
 
+    $LastSession = $job.FindLastSession()
+
+    if ($LastSession) {
+        $SessionStart = if ((Get-Date $LastSession.CreationTime) -gt (Get-Date 1970-01-01)) { Get-Date $LastSession.CreationTime -Format "yyyy/MM/dd-HH:mm:ss" } else { $null }
+        $SessionEnd = if ((Get-Date $LastSession.EndTime) -gt (Get-Date 1970-01-01)) { Get-Date $LastSession.EndTime -Format "yyyy/MM/dd-HH:mm:ss" } else { $null }
+
+        if ($SessionStart -and $SessionEnd) {
+            $startTime = [datetime]::ParseExact($SessionStart, "yyyy/MM/dd-HH:mm:ss", $null)
+            $endTime = [datetime]::ParseExact($SessionEnd, "yyyy/MM/dd-HH:mm:ss", $null)
+            $duration = $endTime - $startTime
+            $formattedDuration = $duration.ToString("hh\:mm\:ss")
+        } else {
+            $formattedDuration = $null
+        }
+    }
+
     $commonProps = @{
         Name = $job.Name
         JobType = $job.JobType
@@ -173,8 +195,11 @@ function Get-JobData {
 
     if ($Stat) {
         $orderedProps | Add-Member -MemberType NoteProperty -Name "IsRunning" -Value $commonProps.IsRunning
-        $orderedProps | Add-Member -MemberType NoteProperty -Name "LastRun" -Value $commonProps.LastRun
         $orderedProps | Add-Member -MemberType NoteProperty -Name "LastResult" -Value $commonProps.LastResult
+        $orderedProps | Add-Member -MemberType NoteProperty -Name "LastRun" -Value $commonProps.LastRun
+        $orderedProps | Add-Member -MemberType NoteProperty -Name "SessionStart" -Value $SessionStart
+        $orderedProps | Add-Member -MemberType NoteProperty -Name "SessionEnd" -Value $SessionEnd
+        $orderedProps | Add-Member -MemberType NoteProperty -Name "Duration" -Value $formattedDuration
     }
 
     return $orderedProps
