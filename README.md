@@ -25,7 +25,7 @@ The `JobList.ps1` script outputs a list of Veeam Backup and Replication jobs to 
   Specifies the output file path. Defaults to `joblist.csv` in the script's directory if not provided.
 
 - **`-Stat` (Alias: `-s`)**:
-  Includes additional status-related columns such as `IsRunning`, `LastRun`, and `LastResult` in the output.
+  Includes additional status-related columns such as `IsRunning`, `LastResult`, `SessionStart`, `SessionEnd` and `Duration` in the output.
 
 #### Output Fields
 The CSV output consists of the following fields:
