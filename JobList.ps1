@@ -4,7 +4,7 @@
 
  .DESCRIPTION
   Output Job List to a CSV file.
-  Version: 0.2.5
+  Version: 0.2.6
 
   The output CSV consists of following fields.
   
@@ -125,12 +125,12 @@ function Get-JobData {
     $LastSession = $job.FindLastSession()
 
     if ($LastSession) {
-        $SessionStart = if ((Get-Date $LastSession.CreationTime) -gt (Get-Date 1970-01-01)) { Get-Date $LastSession.CreationTime -Format "yyyy/MM/dd-HH:mm:ss" } else { $null }
-        $SessionEnd = if ((Get-Date $LastSession.EndTime) -gt (Get-Date 1970-01-01)) { Get-Date $LastSession.EndTime -Format "yyyy/MM/dd-HH:mm:ss" } else { $null }
+        $SessionStart = if ((Get-Date $LastSession.CreationTime) -gt (Get-Date 1970-01-01)) { Get-Date $LastSession.CreationTime -Format "yyyy/MM/dd HH:mm:ss" } else { $null }
+        $SessionEnd = if ((Get-Date $LastSession.EndTime) -gt (Get-Date 1970-01-01)) { Get-Date $LastSession.EndTime -Format "yyyy/MM/dd HH:mm:ss" } else { $null }
 
         if ($SessionStart -and $SessionEnd) {
-            $startTime = [datetime]::ParseExact($SessionStart, "yyyy/MM/dd-HH:mm:ss", $null)
-            $endTime = [datetime]::ParseExact($SessionEnd, "yyyy/MM/dd-HH:mm:ss", $null)
+            $startTime = [datetime]::ParseExact($SessionStart, "yyyy/MM/dd HH:mm:ss", $null)
+            $endTime = [datetime]::ParseExact($SessionEnd, "yyyy/MM/dd HH:mm:ss", $null)
             $duration = $endTime - $startTime
             $formattedDuration = $duration.ToString("hh\:mm\:ss")
         } else {
