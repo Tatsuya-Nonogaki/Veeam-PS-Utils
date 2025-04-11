@@ -4,8 +4,8 @@
 
  .DESCRIPTION
   Get the last result of specified VBR Job. The job status can be grasped 
-  through log file and/or exit code of the script.
-  Version: 0.6.2
+  via log file and/or exit code of the script.
+  Version: 0.7.0
   
   Exit codes:
        0: Job finished with Success status.
@@ -19,7 +19,7 @@
   (Alias -j) Mandatory. The definition name of Job.
 
  .PARAMETER Log
-  (Alias -l) Append logs to this file. This overrides $Set_Log parameter in
+  (Alias -l) Append logs to this file. This overrides $Set_Log parameter in 
   the script itself. If it doesn't contain '\', it is assumed in the script 
   dir. No logging is done if neither Log nor Set_Log are set.
 
@@ -103,27 +103,36 @@ if (!$job) {
     Exit 254
 }
 
-$retval = 8
 
-$LastRun = if ((Get-Date $job.LatestRunLocal) -gt (Get-Date 1970-01-01)) { Get-Date $job.LatestRunLocal -Format "yyyy/MM/dd-HH:mm:ss" } else { $null }
-$LastResult = if ((Get-Date $job.LatestRunLocal) -gt (Get-Date 1970-01-01)) { $job.GetLastResult() } else { $null }
+$job = Get-VBRJob -Name $JobName
+if ($job) { $LastSession = $job.FindLastSession() }
 
-$LastSession = $job.FindLastSession()
 if ($LastSession) {
-    $SessionStart = if ((Get-Date $LastSession.CreationTime) -gt (Get-Date 1970-01-01)) { Get-Date $LastSession.CreationTime -Format "yyyy/MM/dd-HH:mm:ss" } else { $null }
-    $SessionEnd = if ((Get-Date $LastSession.EndTime) -gt (Get-Date 1970-01-01)) { Get-Date $LastSession.EndTime -Format "yyyy/MM/dd-HH:mm:ss" } else { $null }
-    $SessionMode = if ($LastSession.IsFullMode) { "Full" } else { "NotFull" }
+    $SessionStart  = if ((Get-Date $LastSession.CreationTime) -gt (Get-Date 1970-01-01)) { Get-Date $LastSession.CreationTime -Format "yyyy/MM/dd-HH:mm:ss" } else { $null }
+    $SessionResult = if ($SessionStart) { $LastSession.Result } else { $null }
+    $SessionEnd    = if ((Get-Date $LastSession.EndTime) -gt (Get-Date 1970-01-01)) { Get-Date $LastSession.EndTime -Format "yyyy/MM/dd-HH:mm:ss" } else { $null }
+    $SessionMode   = if ($LastSession.IsFullMode) { "Full" } else { "NotFull" }
+
+    if ($SessionStart -and $SessionEnd) {
+        $startTime = [datetime]::ParseExact($SessionStart, "yyyy/MM/dd-HH:mm:ss", $null)
+        $endTime = [datetime]::ParseExact($SessionEnd, "yyyy/MM/dd-HH:mm:ss", $null)
+        $duration = $endTime - $startTime
+        $formattedDuration = $duration.ToString("hh\:mm\:ss")
+    } else {
+        $formattedDuration = $null
+    }
 } else {
-    WriteMsg "No such Session record"
+    WriteMsg "No Session record available"
 }
 
-Switch ($LastResult) {
+$retval = 8
+Switch ($SessionResult) {
   'Success' { $retval = 0 }
   'Failed'  { $retval = 1 }
   'Warning' { $retval = 2 }
   'None'    { $retval = 4 }
 }
 
-WriteMsg "Result:$LastResult Code:$retval LastRun:$LastRun SessionStart:$SessionStart SessionEnd:$SessionEnd Mode:$SessionMode"
+WriteMsg "Result:$SessionResult Code:$retval SessionStart:$SessionStart SessionEnd:$SessionEnd Duration:$formattedDuration Mode:$SessionMode"
 
 Exit $retval
