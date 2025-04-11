@@ -32,26 +32,25 @@ The CSV output consists of the following fields:
 
 | Field              | Description                                                                 |
 |--------------------|-----------------------------------------------------------------------------|
-| `Name`             | Job Name.                                                                 |
-| `JobType`          | Type of job (e.g., Backup, Replica).                                       |
-| `Description`      | Description of the job.                                                   |
-| `Sources`          | Source objects of the backup/replication job.                             |
-| `TargetRepository` | (Backup only) Target repository for backups.                              |
-| `TargetCluster`    | (Replica only) Target cluster for replication.                            |
-| `TargetFolder`     | (Replica only) Target folder for replication.                             |
-| `TargetDatastore`  | (Replica only) Target datastore for replication.                          |
-| `RestorePoints`    | Number of restore points to keep.                                         |
-| `IsScheduleEnabled`| Indicates if the job is enabled.                                          |
-| `RunAutomatically` | Indicates if the job runs automatically based on its configuration.       |
-| `IsRunning`        | (Optional, with `-Stat`) Indicates if the job is running.                 |
-| `LastRun`          | (Optional, with `-Stat`) Timestamp of the last run.                      |
-| `SessionStart`     | (Optional, with `-Stat`) Exact start timestamp of the last session.       |
-| `SessionEnd`       | (Optional, with `-Stat`) Exact end timestamp of the last session.         |
-| `Duration`         | (Optional, with `-Stat`) Duration of the session.                         |
-| `LastResult`       | (Optional, with `-Stat`) Result of the last job run.                      |
-| `DailyStartTime`   | Configured daily start time (if applicable).                              |
-| `Periodically`     | Interval for periodic execution (if applicable).                         |
-| `HourlyOffset`     | Time offset within an hour for periodic schedules (if applicable).        |
+| `Name`             | Job Name.                                                                   |
+| `JobType`          | Type of job (e.g., Backup, Replica).                                        |
+| `Description`      | Description of the job.                                                     |
+| `Sources`          | Source objects of the backup/replication job.                               |
+| `TargetRepository` | (Backup only) Target repository for backups.                                |
+| `TargetCluster`    | (Replica only) Target cluster for replication.                              |
+| `TargetFolder`     | (Replica only) Target folder for replication.                               |
+| `TargetDatastore`  | (Replica only) Target datastore for replication.                            |
+| `RestorePoints`    | Number of restore points to keep.                                           |
+| `IsScheduleEnabled`| Indicates if the job is enabled.                                            |
+| `RunAutomatically` | Indicates if the job runs automatically based on its configuration.         |
+| `IsRunning`        | (Optional, with `-Stat`) Indicates if the job is running.                   |
+| `SessionStart`     | (Optional, with `-Stat`) Start timestamp of the last session.               |
+| `SessionEnd`       | (Optional, with `-Stat`) End timestamp of the last session.                 |
+| `Duration`         | (Optional, with `-Stat`) Duration of the last job.                          |
+| `LastResult`       | (Optional, with `-Stat`) Result of the last job session.                    |
+| `DailyStartTime`   | Configured daily start time (if applicable).                                |
+| `Periodically`     | Interval for periodic execution (if applicable).                            |
+| `HourlyOffset`     | Time offset within an hour for periodic schedules (if applicable).          |
 
 #### Usage Example
 ```powershell
