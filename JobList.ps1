@@ -4,7 +4,7 @@
 
  .DESCRIPTION
   Output Job List to a CSV file.
-  Version: 0.2.6
+  Version: 0.3.0
 
   The output CSV consists of following fields.
   
@@ -37,17 +37,14 @@
   *IsRunning
     The Job was running at the moment the list was acquired.
   
-  *LastRun
-    The most recent start time of the Job.
-  
   *SessionStart and SessionEnd
-    The exact start and end time obtained by looking up the session information.
+    Start and end time of the last job session.
   
   *Duration
-    The duration of the job calculated from SessionStart and SessionEnd.
+    Duration of the last job calculated from SessionStart and SessionEnd.
   
   *LastResult
-    Result of the LastRun.
+    Result of the last job session.
   
   *DailyStartTime
     Configured start time at the 'Daily at this time' field of Schedule page of the Job 
@@ -67,8 +64,8 @@
   Defaults to 'scriptdir\joblist.csv'.
  
  .PARAMETER Stat
-  (Alias -s) Let the output include status related columns, i.e., IsRunning, LastRun 
-  and LastResult. 
+  (Alias -s) Let the output include status related columns, i.e., IsRunning, LastResult, 
+  SessionStart, SessionEnd and Duration. 
 #>
 [CmdletBinding()]
 Param(
@@ -125,8 +122,9 @@ function Get-JobData {
     $LastSession = $job.FindLastSession()
 
     if ($LastSession) {
-        $SessionStart = if ((Get-Date $LastSession.CreationTime) -gt (Get-Date 1970-01-01)) { Get-Date $LastSession.CreationTime -Format "yyyy/MM/dd HH:mm:ss" } else { $null }
-        $SessionEnd = if ((Get-Date $LastSession.EndTime) -gt (Get-Date 1970-01-01)) { Get-Date $LastSession.EndTime -Format "yyyy/MM/dd HH:mm:ss" } else { $null }
+        $SessionStart  = if ((Get-Date $LastSession.CreationTime) -gt (Get-Date 1970-01-01)) { Get-Date $LastSession.CreationTime -Format "yyyy/MM/dd HH:mm:ss" } else { $null }
+        $SessionResult = if ($SessionStart) { $LastSession.Result } else { $null }
+        $SessionEnd    = if ((Get-Date $LastSession.EndTime) -gt (Get-Date 1970-01-01)) { Get-Date $LastSession.EndTime -Format "yyyy/MM/dd HH:mm:ss" } else { $null }
 
         if ($SessionStart -and $SessionEnd) {
             $startTime = [datetime]::ParseExact($SessionStart, "yyyy/MM/dd HH:mm:ss", $null)
@@ -147,8 +145,6 @@ function Get-JobData {
         IsScheduleEnabled = $job.IsScheduleEnabled
         RunAutomatically = -not $job.Options.JobOptions.RunManually
         IsRunning = $job.IsRunning
-        LastRun = if ((Get-Date $job.LatestRunLocal) -gt (Get-Date 1970-01-01)) { $job.LatestRunLocal } else { $null }
-        LastResult = if ((Get-Date $job.LatestRunLocal) -gt (Get-Date 1970-01-01)) { $job.GetLastResult() } else { $null }
         DailyStartTime = if ($job.ScheduleOptions.OptionsDaily.TimeLocal) { $job.ScheduleOptions.OptionsDaily.TimeLocal | Get-Date -Format t } else { $null }
         Periodically = if ($job.ScheduleOptions.OptionsPeriodically.Enabled -eq "True") { ($job.ScheduleOptions.OptionsPeriodically -split ",")[1] -replace '^[^,]*:\s*', '' } else { $null }
         HourlyOffset = if ($job.ScheduleOptions.OptionsPeriodically.Enabled -eq "True") { $job.ScheduleOptions.OptionsPeriodically.HourlyOffset } else { $null }
@@ -195,8 +191,7 @@ function Get-JobData {
 
     if ($Stat) {
         $orderedProps | Add-Member -MemberType NoteProperty -Name "IsRunning" -Value $commonProps.IsRunning
-        $orderedProps | Add-Member -MemberType NoteProperty -Name "LastResult" -Value $commonProps.LastResult
-        $orderedProps | Add-Member -MemberType NoteProperty -Name "LastRun" -Value $commonProps.LastRun
+        $orderedProps | Add-Member -MemberType NoteProperty -Name "LastResult" -Value $SessionResult
         $orderedProps | Add-Member -MemberType NoteProperty -Name "SessionStart" -Value $SessionStart
         $orderedProps | Add-Member -MemberType NoteProperty -Name "SessionEnd" -Value $SessionEnd
         $orderedProps | Add-Member -MemberType NoteProperty -Name "Duration" -Value $formattedDuration
