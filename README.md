@@ -9,7 +9,7 @@ Welcome to the **Veeam PowerShell Utilities** repository! This collection of Pow
 ### 1. `JobList.ps1`
 
 #### Overview
-The `JobList.ps1` script outputs a list of Veeam Backup and Replication jobs to a CSV file. It provides major properties of each job, enabling backup administrators to easily analyze and manage their backup and replication configurations.
+The `JobList.ps1` script outputs a list of Veeam Backup and Replication jobs to a CSV file. It provides major properties of each job, enabling backup administrators to easily analyze and manage their configurations.
 
 #### Key Features
 - Outputs job information to a CSV file.
@@ -25,7 +25,7 @@ The `JobList.ps1` script outputs a list of Veeam Backup and Replication jobs to 
   Specifies the output file path. Defaults to `joblist.csv` in the script's directory if not provided.
 
 - **`-Stat` (Alias: `-s`)**:
-  Includes additional status-related columns such as `IsRunning`, `LastResult`, `SessionStart`, `SessionEnd` and `Duration` in the output.
+  Includes additional status-related columns such as `IsRunning`, `LastResult`, `SessionStart`, `SessionEnd`, and `Duration` in the output.
 
 #### Output Fields
 The CSV output consists of the following fields:
@@ -112,6 +112,60 @@ The `VBRStatusWrapper.bat` script is a wrapper for `JobStatus.ps1` to facilitate
 ```batch
 :: Check the status of a backup job
 VBRStatusWrapper.bat DailyBackup
+```
+
+---
+
+### 4. `RunVBRJob.ps1`
+
+#### Overview
+The `RunVBRJob.ps1` script starts a specified Veeam Backup and Replication job and retrieves its result. It allows passing additional options to the `Start-VBRJob` cmdlet and uses a configuration file (`settings.ps1`) for global settings.
+
+#### Key Features
+- Starts a VBR job and retrieves its result.
+- Logs job execution details to a file.
+- Supports passing additional options to the `Start-VBRJob` cmdlet via the `-VBRJobOpt` parameter.
+- Can use a custom configuration file for global settings.
+
+#### Parameters
+- **`-JobName` (Alias: `-j`)** (Mandatory):
+  Specifies the name of the job to start.
+
+- **`-Config` (Alias: `-c`)**:
+  Specifies an alternative configuration file. Defaults to `settings.ps1` in the script's directory.
+
+- **`-VBRJobOpt` (Alias: `-o`)**:
+  Passes additional options to the `Start-VBRJob` cmdlet. Example: `-VBRJobOpt "-FullBackup -RetryBackup"`.
+
+- **`-Log` (Alias: `-l`)**:
+  Appends logs to the specified file. Overrides the `$Set_Log` parameter in `settings.ps1`.
+
+- **`-NoExec` (Alias: `-n`)**:
+  Returns the result of the last session without executing the job.
+
+- **`-Quiet` (Alias: `-q`)**:
+  Suppresses console output. Results can still be accessed via logs or exit codes.
+
+#### Configuration (`settings.ps1`)
+The `settings.ps1` file is used for global configurations. It includes settings such as the default log file:
+
+```powershell
+# File to append logs to. Comment it out or set null if no logging is required.
+$Set_Log = 'vbrjob.log'
+```
+
+#### Exit Codes
+- `0`: Job finished with "Success" status.
+- `1`: Job finished with "Failed" status.
+- `2`: Job finished with "Warning" status.
+- `4`: The job has never been run yet ("None" status).
+- `8`: Unknown status.
+- Other: Errors such as non-existent job name or syntax issues.
+
+#### Usage Example
+```powershell
+# Run a backup job with custom options
+.\RunVBRJob.ps1 -JobName "WeeklyBackup" -VBRJobOpt "-FullBackup" -Log job_run.log
 ```
 
 ---
