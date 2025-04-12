@@ -119,13 +119,14 @@ VBRStatusWrapper.bat DailyBackup
 ### 4. `RunVBRJob.ps1`
 
 #### Overview
-The `RunVBRJob.ps1` script starts a specified Veeam Backup and Replication job and retrieves its result. It allows passing additional options to the `Start-VBRJob` cmdlet and uses a configuration file (`settings.ps1`) for global settings.
+The `RunVBRJob.ps1` script starts a specified Veeam Backup and Replication job and retrieves its result. It allows passing additional options to the `Start-VBRJob` cmdlet and uses a configuration file (`settings.ps1`) for global settings. It is designed with external monitoring systems and job schedulers in mind, making it suitable for automated workflows.
 
 #### Key Features
 - Starts a VBR job and retrieves its result.
 - Logs job execution details to a file.
 - Supports passing additional options to the `Start-VBRJob` cmdlet via the `-VBRJobOpt` parameter.
 - Can use a custom configuration file for global settings.
+- Integrates seamlessly with external monitoring systems and job schedulers for automated task management.
 
 #### Parameters
 - **`-JobName` (Alias: `-j`)** (Mandatory):
@@ -173,12 +174,13 @@ $Set_Log = 'vbrjob.log'
 ### 5. `VBRJobWrapper.bat`
 
 #### Overview
-The `VBRJobWrapper.bat` script is a wrapper for `RunVBRJob.ps1` to facilitate execution in batch environments. It ensures that exit codes from `RunVBRJob.ps1` are correctly captured and returned to the calling environment.
+The `VBRJobWrapper.bat` script is a wrapper for `RunVBRJob.ps1` to facilitate execution in batch environments. It ensures that exit codes from `RunVBRJob.ps1` are correctly captured and returned to the calling environment, making it ideal for integration with external monitoring systems or job schedulers.
 
 #### Key Features
 - Executes `RunVBRJob.ps1` and passes all arguments to it.
 - Correctly captures and propagates the exit code from `RunVBRJob.ps1`.
 - Simplifies the usage of `RunVBRJob.ps1` in batch scripts or legacy systems.
+- Designed for use in automated workflows with monitoring systems and schedulers.
 
 #### Usage Example
 ```batch
