@@ -170,6 +170,24 @@ $Set_Log = 'vbrjob.log'
 
 ---
 
+### 5. `VBRJobWrapper.bat`
+
+#### Overview
+The `VBRJobWrapper.bat` script is a wrapper for `RunVBRJob.ps1` to facilitate execution in batch environments. It ensures that exit codes from `RunVBRJob.ps1` are correctly captured and returned to the calling environment.
+
+#### Key Features
+- Executes `RunVBRJob.ps1` and passes all arguments to it.
+- Correctly captures and propagates the exit code from `RunVBRJob.ps1`.
+- Simplifies the usage of `RunVBRJob.ps1` in batch scripts or legacy systems.
+
+#### Usage Example
+```batch
+:: Run a backup job with custom options
+VBRJobWrapper.bat WeeklyBackup -o "-FullBackup -RetryBackup"
+```
+
+---
+
 ## Contribution
 Feel free to raise issues or contribute to this project by creating pull requests. Contributions are welcome to enhance the utility of these scripts!
 
