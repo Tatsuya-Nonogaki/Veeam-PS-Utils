@@ -5,13 +5,13 @@
  .DESCRIPTION
   Get the last result of specified VBR Job. The job status can be grasped 
   via log file and/or exit code of the script.
-  Version: 0.7.0
+  Version: 0.7.1
   
   Exit codes:
        0: Job finished with Success status.
        1: Job finished with Failed status.
        2: Job finished with Warning.
-       4: The job has never been run yet ("None" status).
+       4: No job record is available or pending ("None" status).
        8: Unknown.
        *: Other errors. ie: non-existent JobName, syntax errors, etc.
 
@@ -24,7 +24,7 @@
   dir. No logging is done if neither Log nor Set_Log are set.
 
  .PARAMETER NoLog
-  Disable logging even if $Sset_Log parameter is set or Log option is passed.
+  Disable logging, even if a log file is specified.
 
  .PARAMETER Quiet
   (Alias -q) Suppress console output. Result can be grasped through exit 
