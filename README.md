@@ -44,10 +44,10 @@ The CSV output consists of the following fields:
 | `IsScheduleEnabled`| Indicates if the job is enabled.                                            |
 | `RunAutomatically` | Indicates if the job runs automatically based on its configuration.         |
 | `IsRunning`        | (Optional, with `-Stat`) Indicates if the job is running.                   |
+| `LastResult`       | (Optional, with `-Stat`) Result of the last job session.                    |
 | `SessionStart`     | (Optional, with `-Stat`) Start timestamp of the last session.               |
 | `SessionEnd`       | (Optional, with `-Stat`) End timestamp of the last session.                 |
 | `Duration`         | (Optional, with `-Stat`) Duration of the last job.                          |
-| `LastResult`       | (Optional, with `-Stat`) Result of the last job session.                    |
 | `DailyStartTime`   | Configured daily start time (if applicable).                                |
 | `Periodically`     | Interval for periodic execution (if applicable).                            |
 | `HourlyOffset`     | Time offset within an hour for periodic schedules (if applicable).          |
@@ -67,7 +67,7 @@ The `JobStatus.ps1` script retrieves the last result of a specified Veeam Backup
 
 #### Key Features
 - Retrieves the last job result, including success, warning, or failure status.
-- Provides detailed logging to a file if enabled.
+- Records output to a log file unless prohibited.
 - Returns exit codes for easy integration with scripts or monitoring tools.
 
 #### Parameters
@@ -87,7 +87,7 @@ The `JobStatus.ps1` script retrieves the last result of a specified Veeam Backup
 - `0`: Job finished with "Success" status.
 - `1`: Job finished with "Failed" status.
 - `2`: Job finished with "Warning" status.
-- `4`: The job has never been run yet ("None" status).
+- `4`: No job record is available or pending ("None" status).
 - `8`: Unknown status.
 - Other: Errors such as non-existent job name or syntax issues.
 
@@ -119,13 +119,13 @@ VBRStatusWrapper.bat DailyBackup
 ### 4. `RunVBRJob.ps1`
 
 #### Overview
-The `RunVBRJob.ps1` script starts a specified Veeam Backup and Replication job and retrieves its result. It allows passing additional options to the `Start-VBRJob` cmdlet and uses a configuration file (`settings.ps1`) for global settings. It is designed with external monitoring systems and job schedulers in mind, making it suitable for automated workflows.
+The `RunVBRJob.ps1` script starts a specified Veeam Backup and Replication job and retrieves its result. It uses a configuration file (`settings.ps1`) for global settings. It is also designed to work in conjunction with external monitoring systems and job schedulers, making it suitable for automated workflows.
 
 #### Key Features
 - Starts a VBR job and retrieves its result.
-- Logs job execution details to a file.
+- Logs job execution summary and result status to a file.
 - Supports passing additional options to the `Start-VBRJob` cmdlet via the `-VBRJobOpt` parameter.
-- Can use a custom configuration file for global settings.
+- Can use different global configuration file for individual or groups of execution.
 - Integrates seamlessly with external monitoring systems and job schedulers for automated task management.
 
 #### Parameters
@@ -159,7 +159,7 @@ $Set_Log = 'vbrjob.log'
 - `0`: Job finished with "Success" status.
 - `1`: Job finished with "Failed" status.
 - `2`: Job finished with "Warning" status.
-- `4`: The job has never been run yet ("None" status).
+- `4`: No job record is available or pending ("None" status).
 - `8`: Unknown status.
 - Other: Errors such as non-existent job name or syntax issues.
 
