@@ -4,7 +4,7 @@
 
  .DESCRIPTION
   Output Job List to a CSV file.
-  Version: 0.3.0
+  Version: 0.3.1
 
   The output CSV consists of following fields.
   
@@ -37,14 +37,14 @@
   *IsRunning
     The Job was running at the moment the list was acquired.
   
+  *LastResult
+    Result of the last job session.
+  
   *SessionStart and SessionEnd
     Start and end time of the last job session.
   
   *Duration
     Duration of the last job calculated from SessionStart and SessionEnd.
-  
-  *LastResult
-    Result of the last job session.
   
   *DailyStartTime
     Configured start time at the 'Daily at this time' field of Schedule page of the Job 
