@@ -4,7 +4,7 @@
 
  .DESCRIPTION
   Output Job List to a CSV file.
-  Version: 0.3.1
+  Version: 0.3.2
 
   The output CSV consists of following fields.
   
@@ -61,7 +61,7 @@
  
  .PARAMETER Log
   (Alias -l) Output file path. If it doesn't contain '\', it is assumed in the script dir.
-  Defaults to 'scriptdir\joblist.csv'.
+  Defaults to 'scriptdir\joblist-{Type}.csv'.
  
  .PARAMETER Stat
   (Alias -s) Let the output include status related columns, i.e., IsRunning, LastResult, 
@@ -83,8 +83,8 @@ Param(
   [switch]$Stat
 )
 
-# File to append logs to. Comment it out or keep null if no logging is required.
-$Set_Log = 'joblist.csv'
+# Output file name, where the placeholder '%' is replaced by Type parameter.
+$LogBaseName = 'joblist-%.csv'
 
 $scriptdir = Split-Path -Path $myInvocation.MyCommand.Path -Parent
 
@@ -92,8 +92,8 @@ import-module Veeam.Backup.PowerShell -warningaction silentlycontinue
 
 if ($Log) {
     $logname = $Log
-} elseif ($Set_Log) {
-    $logname = $Set_Log
+} elseif ($LogBaseName) {
+    $logname = $LogBaseName -replace '%', $Type.ToLower()
 }
 
 if ($logname) {
