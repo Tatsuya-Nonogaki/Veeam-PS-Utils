@@ -22,7 +22,7 @@ The `JobList.ps1` script outputs a list of Veeam Backup and Replication jobs to 
   Specifies the type of job to list. Must be either `backup` or `replica` for the time being.
 
 - **`-Log` (Alias: `-l`)**:
-  Specifies the output file path. Defaults to `joblist.csv` in the script's directory if not provided.
+  Specifies the output file path. Defaults to `joblist-{Type}.csv` in the script's directory if not provided.
 
 - **`-Stat` (Alias: `-s`)**:
   Includes additional status-related columns such as `IsRunning`, `LastResult`, `SessionStart`, `SessionEnd`, and `Duration` in the output.
