@@ -43,14 +43,14 @@ The CSV output consists of the following fields:
 | `RestorePoints`    | Number of restore points to keep.                                           |
 | `IsScheduleEnabled`| Indicates if the job is enabled.                                            |
 | `RunAutomatically` | Indicates if the job runs automatically based on its configuration.         |
+| `DailyStartTime`   | Configured daily start time (if applicable).                                |
+| `Periodically`     | Interval for periodic execution (if applicable).                            |
+| `HourlyOffset`     | Time offset within an hour for periodic schedules (if applicable).          |
 | `IsRunning`        | (Optional, with `-Stat`) Indicates if the job is running.                   |
 | `LastResult`       | (Optional, with `-Stat`) Result of the last job session.                    |
 | `SessionStart`     | (Optional, with `-Stat`) Start timestamp of the last session.               |
 | `SessionEnd`       | (Optional, with `-Stat`) End timestamp of the last session.                 |
 | `Duration`         | (Optional, with `-Stat`) Duration of the last job.                          |
-| `DailyStartTime`   | Configured daily start time (if applicable).                                |
-| `Periodically`     | Interval for periodic execution (if applicable).                            |
-| `HourlyOffset`     | Time offset within an hour for periodic schedules (if applicable).          |
 
 #### Usage Example
 ```powershell
