@@ -4,7 +4,7 @@
 
  .DESCRIPTION
   Output Job List to a CSV file.
-  Version: 0.3.2
+  Version: 0.3.3
 
   The output CSV consists of following fields.
   
@@ -34,6 +34,16 @@
     'FALSE' indicates the Job will not run automatically because 'Run the job automatically' 
     check box is unchecked in Schedule page of the Job configuration.
   
+  *DailyStartTime
+    Configured start time at the 'Daily at this time' field of Schedule page of the Job 
+    configuration. Usually ignorable on a Periodically scheduled Job.
+  
+  *Periodically
+    Interval configured at 'Periodically every' field of the Schedule.
+  
+  *HourlyOffset
+    Time offset configured at 'Start time within an hour' field of Periodical Schedule.
+  
   *IsRunning
     The Job was running at the moment the list was acquired.
   
@@ -45,16 +55,6 @@
   
   *Duration
     Duration of the last job calculated from SessionStart and SessionEnd.
-  
-  *DailyStartTime
-    Configured start time at the 'Daily at this time' field of Schedule page of the Job 
-    configuration. Usually ignorable on a Periodically scheduled Job.
-  
-  *Periodically
-    Interval configured at 'Periodically every' field of the Schedule.
-  
-  *HourlyOffset
-    Time offset configured at 'Start time within an hour' field of Periodical Schedule.
  
  .PARAMETER Type
   (Alias -t) Mandatory. Job type. Must be either 'backup' or 'replica'.
