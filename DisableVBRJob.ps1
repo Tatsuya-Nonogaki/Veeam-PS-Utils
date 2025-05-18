@@ -4,7 +4,7 @@
 
  .DESCRIPTION
   Disable or enable Jobs according to the list from a file.
-  Version: 0.1.0
+  Version: 0.1.1
 
  .PARAMETER ListFile
   (Alias -f) A list file from which the target Job names are read. If special keyword 
@@ -20,16 +20,16 @@
   with -Enable. If neither -Disable nor -Enable is specified, This is the default.
 
  .PARAMETER Enable
-  (Alias -d) Specifies the intended action is enabling. Mutually exclusive with 
+  (Alias -e) Specifies the intended action is enabling. Mutually exclusive with 
   -Disable.
 #>
 [CmdletBinding()]
 Param(
-  [Parameter()]
+  [Parameter(Position=0)]
   [Alias("f")]
   [string]$ListFile,
 
-  [Parameter()]
+  [Parameter(Position=1)]
   [Alias("t")]
   [string]$Type,
 
@@ -44,60 +44,126 @@ Param(
 
 begin {
     $scriptdir = Split-Path -Path $myInvocation.MyCommand.Path -Parent
+    $defaultListFile = Join-Path $scriptdir "joblist.txt"
 
-    # Default list file path
-    $defaultListFile = "${scriptdir}\joblist.txt"
-
-    # Arguments validation
+    # Show help if no parameters specified
     if ($PSBoundParameters.Count -eq 0) {
         Get-Help $MyInvocation.InvocationName
-        exit
+        exit 1
     }
 
-    # --Validations here--
-    if (-not $PSBoundParameters.ContainsKey('MemorySize')) {
-        throw "Error: -MemorySize is a mandatory parameter and must be specified."
+    # Validate mutually exclusive switches
+    if ($Disable -and $Enable) {
+        throw "Error: -Disable and -Enable cannot be specified together."
     }
 
-    if ($PSBoundParameters.ContainsKey('Offline')) {
-        if (-not $PSBoundParameters.ContainsKey('DiskSize')) {
-            throw "Error: -DiskSize must be specified when using -Offline."
-        }
-    } else {
-        if (-not $PSBoundParameters.ContainsKey('VmName')) {
-            throw "Error: -VmName is a mandatory parameter unless -Offline is specified."
-        }
-    }
-
+    # Set default mode to Disable
     if ($Enable) {
         $Mode = "Enable"
     } else {
         $Mode = "Disable"
     }
+
+    # Validate at least one of ListFile or Type is provided
+    if (-not $ListFile -and -not $Type) {
+        throw "Error: Either -ListFile or -Type (or both) must be specified."
+    }
+
+    if ($Type) {
+        $Type = (Get-Culture).TextInfo.ToTitleCase($Type.ToLower())
+    }
+
+    # Resolve list file path
+    if ($ListFile -eq "default") {
+        $ListFilePath = $defaultListFile
+    } elseif ($ListFile) {
+        $ListFilePath = $ListFile
+    } else {
+        $ListFilePath = $null
+    }
+
+    # Load job names from file if specified
+    $JobNamesFromFile = @()
+    if ($ListFilePath) {
+        if (-not (Test-Path $ListFilePath)) {
+            throw "Error: List file not found: $ListFilePath"
+        }
+        $JobNamesFromFile = Get-Content $ListFilePath | Where-Object { $_ -and $_.Trim() -ne "" }
+        if ($JobNamesFromFile.Count -eq 0) {
+            throw "Error: No job names found in list file: $ListFilePath"
+        }
+    }
 }
 
 process {
 
-    import-module Veeam.Backup.PowerShell -warningaction silentlycontinue
+    Import-Module Veeam.Backup.PowerShell -ErrorAction Stop
 
-    $jobs = Get-VBRJob
-    if (! $jobs) {
-        Write-Host "No matching Jobs found"
-        Exit 1
+    # Get all jobs
+    $AllJobs = Get-VBRJob
+    if (!$AllJobs) {
+        Write-Host "No jobs found in Veeam."
+        exit 1
     }
 
-    # Filter Jobs by Type
+    $TargetJobs = $AllJobs
+
+    # Filter by Type if specified
     if ($Type) {
-        $jobs | Where-Object { $_.JobType -eq (#-- capitalize $Type --) }
-        if (! $jobs) {
-            Write-Host "No matching Jobs found"
-            Exit 1
+        $TargetJobs = $TargetJobs | Where-Object { $_.JobType -eq $Type }
+        if ($TargetJobs.Count -eq 0) {
+            Write-Host "No jobs found matching type '$Type'."
+            exit 1
         }
     }
 
-    Switch ($Mode) {
-        "Disable" { $jobs | Disable-VBRJob }
-        "Enable"  { $jobs | Enable-VBRJob }
+    # Filter by names from file if specified
+    if ($JobNamesFromFile.Count -gt 0) {
+        $TargetJobs = $TargetJobs | Where-Object { $JobNamesFromFile -contains $_.Name }
+        if ($TargetJobs.Count -eq 0) {
+            Write-Host "No jobs found matching the names in '$ListFilePath'."
+            exit 1
+        }
+    }
+
+    if ($TargetJobs.Count -eq 0) {
+        Write-Host "No matching jobs found for the given criteria."
+        exit 1
+    }
+
+    # Show what will be done
+    Write-Host "$Mode the following job(s):"
+    $TargetJobs | ForEach-Object { Write-Host "- $($_.Name)" }
+
+    # Confirm before making changes
+    $Confirm = Read-Host "Proceed to $Mode these job(s)? (Y/N)"
+    if ($Confirm -notin @("Y", "y")) {
+        Write-Host "Operation cancelled."
+        exit 0
+    }
+
+    # Perform action
+    switch ($Mode) {
+        "Disable" {
+            $TargetJobs | ForEach-Object {
+                try {
+                    Disable-VBRJob -Job $_ -ErrorAction Stop
+                    Write-Host "Disabled: $($_.Name)"
+                } catch {
+                    Write-Warning "Failed to disable: $($_.Name) - $_"
+                }
+            }
+        }
+        "Enable" {
+            $TargetJobs | ForEach-Object {
+                try {
+                    Enable-VBRJob -Job $_ -ErrorAction Stop
+                    Write-Host "Enabled: $($_.Name)"
+                } catch {
+                    Write-Warning "Failed to enable: $($_.Name) - $_"
+                }
+            }
+        }
     }
 
 }
