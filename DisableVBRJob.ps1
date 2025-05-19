@@ -4,7 +4,7 @@
 
  .DESCRIPTION
   Disable or enable Veeam jobs. Optionally, you can check the result.
-  Version: 0.1.6
+  Version: 0.1.7
 
   You can specify target jobs in three ways:
    - By providing a file of job names with -ListFile.
@@ -192,6 +192,11 @@ process {
                 exit 0
             }
             $TargetJobs | ForEach-Object {
+                # Check if job is set to "Run automatically"
+                if ($_.Options.JobOptions.RunManually) {
+                    Write-Host ("Skipping job '{0}': operation is not possible because 'Run automatically' is not selected in its 'schedule' settings." -f $_.Name) -ForegroundColor Yellow
+                    return
+                }
                 try {
                     Disable-VBRJob -Job $_ -ErrorAction Stop | Out-Null
                     Write-Host "Disabled: $($_.Name)"
@@ -209,6 +214,11 @@ process {
                 exit 0
             }
             $TargetJobs | ForEach-Object {
+                # Check if job is set to "Run automatically"
+                if ($_.Options.JobOptions.RunManually) {
+                    Write-Host ("Skipping job '{0}': operation is not possible because 'Run automatically' is not selected in its 'schedule' settings." -f $_.Name) -ForegroundColor Yellow
+                    return
+                }
                 try {
                     Enable-VBRJob -Job $_ -ErrorAction Stop | Out-Null
                     Write-Host "Enabled: $($_.Name)"
