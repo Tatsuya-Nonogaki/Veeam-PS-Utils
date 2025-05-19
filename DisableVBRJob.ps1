@@ -4,7 +4,7 @@
 
  .DESCRIPTION
   Disable or enable Veeam jobs. Optionally, you can check the result.
-  Version: 0.1.4
+  Version: 0.1.6
 
   You can specify target jobs in three ways:
    - By providing a file of job names with -ListFile.
@@ -38,7 +38,7 @@
   and -Status.
 
  .PARAMETER Status
-  (Alias -s) Can be used to check the result, i.e., enabled/disabled. Mutually exclusive 
+  (Alias -s) Can be used to check the status, i.e., enabled/disabled. Mutually exclusive 
   with -Enable and -Disable.
 #>
 [CmdletBinding()]
@@ -177,7 +177,7 @@ process {
 
     switch ($Mode) {
         "Status" {
-            Write-Host "Status of the following job(s):"
+            Write-Host "Status of the job(s):"
             $TargetJobs | ForEach-Object {
                 $jobStatus = if ($_.IsScheduleEnabled) { "Enabled" } else { "Disabled" }
                 Write-Host ("- {0}	{1}" -f $_.Name, $jobStatus)
@@ -193,7 +193,7 @@ process {
             }
             $TargetJobs | ForEach-Object {
                 try {
-                    Disable-VBRJob -Job $_ -ErrorAction Stop
+                    Disable-VBRJob -Job $_ -ErrorAction Stop | Out-Null
                     Write-Host "Disabled: $($_.Name)"
                 } catch {
                     Write-Warning "Failed to disable: $($_.Name) - $_"
@@ -205,12 +205,12 @@ process {
             $TargetJobs | ForEach-Object { Write-Host "- $($_.Name)" }
             $Confirm = Read-Host "Proceed to Enable these job(s)? (Y/N)"
             if ($Confirm -notin @("Y", "y")) {
-                Write-Host "Operation cancelled."
+                Write-Host "Operation cancelled." -ForegroundColor Yellow
                 exit 0
             }
             $TargetJobs | ForEach-Object {
                 try {
-                    Enable-VBRJob -Job $_ -ErrorAction Stop
+                    Enable-VBRJob -Job $_ -ErrorAction Stop | Out-Null
                     Write-Host "Enabled: $($_.Name)"
                 } catch {
                     Write-Warning "Failed to enable: $($_.Name) - $_"
