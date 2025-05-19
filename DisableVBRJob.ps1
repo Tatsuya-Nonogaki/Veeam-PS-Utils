@@ -3,7 +3,7 @@
   Disable or enable Veeam jobs by list, type, or direct job name.
 
  .DESCRIPTION
-  Disable, enable, or show status of Veeam jobs.  
+  Disable or enable Veeam jobs. Optionally, you can check the result.
   Version: 0.1.2
 
   You can specify target jobs in three ways:
@@ -38,8 +38,8 @@
   and -Status.
 
  .PARAMETER Status
-  (Alias -s) Show the enable/disable status of the jobs. Mutually exclusive with -Enable 
-  and -Disable.
+  (Alias -s) Can be used to check the result, i.e., enabled/disabled. Mutually exclusive 
+  with -Enable and -Disable.
 #>
 [CmdletBinding()]
 Param(
