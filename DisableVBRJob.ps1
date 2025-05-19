@@ -3,8 +3,8 @@
   Disable or enable Veeam jobs by list, type, or direct job name.
 
  .DESCRIPTION
-  Disable or enable Veeam jobs. Optionally, you can check the result.
-  Version: 0.1.7
+  Disable or enable Veeam jobs. Optionally, you can check the current status.
+  Version: 0.1.8a
 
   You can specify target jobs in three ways:
    - By providing a file of job names with -ListFile.
@@ -16,8 +16,8 @@
   If only -Type is used, all jobs of that type will be selected.
 
  .PARAMETER ListFile
-  (Alias -f) A list file from which the target Job names are read. If special keyword 
-  'default' is specified, the default file defined by $defaultListFile in the script is 
+  (Alias -f) A list file containing the target job names, one per line. If special keyword 
+  'default' is specified, the default file defined by $defaultListFile in this script is 
   used. Cannot be combined with -JobName. Either this, -Type, or -JobName must be specified.
 
  .PARAMETER JobName
@@ -30,8 +30,8 @@
 
  .PARAMETER Disable
   (Alias -d) Specifies the intended action is disabling the jobs. Mutually exclusive with 
-  -Enable and -Status. If neither -Disable nor -Enable nor -Status is specified, This is 
-  the default.
+  -Enable and -Status. If neither -Disable, -Enable nor -Status is specified, this is the 
+  default action.
 
  .PARAMETER Enable
   (Alias -e) Specifies the intended action is enabling. Mutually exclusive with -Disable 
