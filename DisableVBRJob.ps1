@@ -1,9 +1,9 @@
 <#
  .SYNOPSIS
-  Disable, enable or show status of Veeam jobs by list, type, or direct job name.
+  Disable or enable Veeam jobs by list, type, or direct job name.
 
  .DESCRIPTION
-  Disable, enable or show status of Veeam jobs.  
+  Disable, enable, or show status of Veeam jobs.  
   Version: 0.1.2
 
   You can specify target jobs in three ways:
@@ -18,15 +18,15 @@
  .PARAMETER ListFile
   (Alias -f) A list file from which the target Job names are read. If special keyword 
   'default' is specified, the default file defined by $defaultListFile in the script is 
-  used. Cannot be combined with -JobName. Either this, -Type or -JobName must be specified.
+  used. Cannot be combined with -JobName. Either this, -Type, or -JobName must be specified.
 
  .PARAMETER JobName
   (Alias -n) Specify the name of a single job directly. Cannot be combined with -ListFile.
-  Either this, -ListFile or -Type must be specified.
+  Either this, -ListFile, or -Type must be specified.
 
  .PARAMETER Type
-  (Alias -t) Job type. Must be one of 'backup', 'replica' or another VBR job type.
-  Either this, -ListFile or -JobName must be specified.
+  (Alias -t) Job type. Must be one of 'backup', 'replica', or another VBR job type.
+  Either this, -ListFile, or -JobName must be specified.
 
  .PARAMETER Disable
   (Alias -d) Specifies the intended action is disabling the jobs. Mutually exclusive with 
