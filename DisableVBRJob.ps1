@@ -4,7 +4,7 @@
 
  .DESCRIPTION
   Disable or enable Veeam jobs. Optionally, you can check the result.
-  Version: 0.1.3
+  Version: 0.1.4
 
   You can specify target jobs in three ways:
    - By providing a file of job names with -ListFile.
@@ -130,7 +130,7 @@ process {
 
     $AllJobs = Get-VBRJob
     if (!$AllJobs) {
-        Write-Host "No jobs found in Veeam."
+        Write-Host "No jobs found in Veeam." -ForegroundColor Yellow
         exit 1
     }
 
@@ -140,16 +140,23 @@ process {
     if ($Type) {
         $TargetJobs = $TargetJobs | Where-Object { $_.JobType -eq $Type }
         if ($TargetJobs.Count -eq 0) {
-            Write-Host "No jobs found matching type '$Type'."
+            Write-Host "No jobs found matching type '$Type'." -ForegroundColor Yellow
             exit 1
         }
     }
 
     # Filter by JobNamesFromFile
     if ($JobNamesFromFile.Count -gt 0) {
+        # Precheck non-existent job names
+        foreach ($name in $JobNamesFromFile) {
+            if (-not ($AllJobs | Where-Object { $_.Name -eq $name })) {
+                Write-Host "- No such job: $name" -ForegroundColor Yellow
+            }
+        }
+
         $TargetJobs = $TargetJobs | Where-Object { $JobNamesFromFile -contains $_.Name }
         if ($TargetJobs.Count -eq 0) {
-            Write-Host "No jobs found matching the names in '$ListFilePath'."
+            Write-Host "No jobs found matching the names in '$ListFilePath'." -ForegroundColor Yellow
             exit 1
         }
     }
@@ -158,13 +165,13 @@ process {
     if ($JobName) {
         $TargetJobs = $TargetJobs | Where-Object { $_.Name -eq $JobName }
         if ($TargetJobs.Count -eq 0) {
-            Write-Host "No job found with the name '$JobName'."
+            Write-Host "No job found with the name '$JobName'." -ForegroundColor Yellow
             exit 1
         }
     }
 
     if ($TargetJobs.Count -eq 0) {
-        Write-Host "No matching jobs found for the given criteria."
+        Write-Host "No matching jobs found for the given criteria." -ForegroundColor Yellow
         exit 1
     }
 
@@ -181,7 +188,7 @@ process {
             $TargetJobs | ForEach-Object { Write-Host "- $($_.Name)" }
             $Confirm = Read-Host "Proceed to Disable these job(s)? (Y/N)"
             if ($Confirm -notin @("Y", "y")) {
-                Write-Host "Operation cancelled."
+                Write-Host "Operation cancelled." -ForegroundColor Yellow
                 exit 0
             }
             $TargetJobs | ForEach-Object {
