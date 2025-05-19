@@ -4,7 +4,7 @@
 
  .DESCRIPTION
   Disable or enable Veeam jobs. Optionally, you can check the result.
-  Version: 0.1.2
+  Version: 0.1.3
 
   You can specify target jobs in three ways:
    - By providing a file of job names with -ListFile.
@@ -126,7 +126,7 @@ begin {
 }
 
 process {
-    Import-Module Veeam.Backup.PowerShell -ErrorAction Stop
+    import-module Veeam.Backup.PowerShell -warningaction silentlycontinue -ErrorAction Stop
 
     $AllJobs = Get-VBRJob
     if (!$AllJobs) {
@@ -172,8 +172,8 @@ process {
         "Status" {
             Write-Host "Status of the following job(s):"
             $TargetJobs | ForEach-Object {
-                $status = if ($_.IsScheduleEnabled) { "Enabled" } else { "Disabled" }
-                Write-Host ("- {0}: {1}" -f $_.Name, $status)
+                $jobStatus = if ($_.IsScheduleEnabled) { "Enabled" } else { "Disabled" }
+                Write-Host ("- {0}	{1}" -f $_.Name, $jobStatus)
             }
         }
         "Disable" {
