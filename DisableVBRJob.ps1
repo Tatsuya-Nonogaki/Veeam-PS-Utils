@@ -6,14 +6,26 @@
   This script provides a quick and managed way to disable or enable VBR jobs.
   Version: 0.1.2beta
 
+  -- draft --
+  - You can disable, enable or print status of the Jobs.
+  - Jobs can be filtered by one of;
+    - A list file (-ListFile), in wihch target Jobs are written one per line.
+    - A Job name (-JobName), mutually exclusive with -ListFile. Can be used for a sigle Job.
+    - A Job type (-Type) such as `Backup', 'Replica'. If used with -ListFile or -JobName, 
+      they are And'ed with this. If used alone, all Jobs of the type is to be targeted.
+  -- --
+
  .PARAMETER ListFile
   (Alias -f) A list file from which the target Job names are read. If special keyword 
   'default' is specified, the default file defined by $defaultListFile in the script is 
-  used. Either this or -Type or both must be specified.
+  used. Either this or -JobName must be specified.
+
+ .PARAMETER JobName
+  (Alias -n) A spacific Job name. Mutually exclusive with -ListFile. Can be used insted of 
+  -ListFileIf if the target to process is one single Job.
 
  .PARAMETER Type
   (Alias -t) Job type. Must be one of 'backup', 'replica' or another VBR Job type.
-  Either this or -ListFile or both must be specified.
 
  .PARAMETER Disable
   (Alias -d) Specifies the intended action is disabling the Jobs. Mutually exclusive with 
@@ -24,8 +36,8 @@
   and -Status.
 
  .PARAMETER Status
-  (Alias -s) Just show the status of the matching Jobs insted of disabling/enabling. 
-  Mutually exclusive with -Disable and -Enable.
+  (Alias -s) Show the enable/disable status of the Jobs. Mutually exclusive with -Enable 
+  and -Disable.
 #>
 [CmdletBinding()]
 Param(
@@ -59,11 +71,14 @@ begin {
         exit 1
     }
 
-    if ($Disable -and $Enable) {
-        throw "Error: -Disable and -Enable cannot be specified together."
+    $switchCount = @($Disable, $Enable, $Status) | Where-Object { $_ } | Measure-Object | Select-Object -ExpandProperty Count
+    if ($switchCount -gt 1) {
+        throw "Error: -Disable, -Enable, and -Status are mutually exclusive. Specify only one."
     }
 
-    if ($Enable) {
+    if ($Status) {
+        $Mode = "Status"
+    } elseif ($Enable) {
         $Mode = "Enable"
     } else {
         $Mode = "Disable"
@@ -99,7 +114,6 @@ begin {
 }
 
 process {
-
     Import-Module Veeam.Backup.PowerShell -ErrorAction Stop
 
     $AllJobs = Get-VBRJob
@@ -113,7 +127,7 @@ process {
     if ($Type) {
         $TargetJobs = $TargetJobs | Where-Object { $_.JobType -eq $Type }
         if ($TargetJobs.Count -eq 0) {
-            Write-Host "No matching Jobs found by type '$Type'."
+            Write-Host "No Jobs found matching type '$Type'."
             exit 1
         }
     }
@@ -121,7 +135,7 @@ process {
     if ($JobNamesFromFile.Count -gt 0) {
         $TargetJobs = $TargetJobs | Where-Object { $JobNamesFromFile -contains $_.Name }
         if ($TargetJobs.Count -eq 0) {
-            Write-Host "No matching Jobs found by the names."
+            Write-Host "No Jobs found matching the names in '$ListFilePath'."
             exit 1
         }
     }
@@ -131,18 +145,22 @@ process {
         exit 1
     }
 
-    Write-Host "$Mode the following Job(s):"
-    $TargetJobs | ForEach-Object { Write-Host "- $($_.Name)" }
-
-    # Confirm before making changes
-    $Confirm = Read-Host "Proceed to $Mode these Job(s)? (Y/N)"
-    if ($Confirm -notin @("Y", "y")) {
-        Write-Host "Operation cancelled."
-        exit 0
-    }
-
     switch ($Mode) {
+        "Status" {
+            Write-Host "Status of the following job(s):"
+            $TargetJobs | ForEach-Object {
+                $status = if ($_.IsScheduleEnabled) { "Enabled" } else { "Disabled" }
+                Write-Host ("- {0}: {1}" -f $_.Name, $status)
+            }
+        }
         "Disable" {
+            Write-Host "Disable the following job(s):"
+            $TargetJobs | ForEach-Object { Write-Host "- $($_.Name)" }
+            $Confirm = Read-Host "Proceed to Disable these job(s)? (Y/N)"
+            if ($Confirm -notin @("Y", "y")) {
+                Write-Host "Operation cancelled."
+                exit 0
+            }
             $TargetJobs | ForEach-Object {
                 try {
                     Disable-VBRJob -Job $_ -ErrorAction Stop
@@ -153,6 +171,13 @@ process {
             }
         }
         "Enable" {
+            Write-Host "Enable the following job(s):"
+            $TargetJobs | ForEach-Object { Write-Host "- $($_.Name)" }
+            $Confirm = Read-Host "Proceed to Enable these job(s)? (Y/N)"
+            if ($Confirm -notin @("Y", "y")) {
+                Write-Host "Operation cancelled."
+                exit 0
+            }
             $TargetJobs | ForEach-Object {
                 try {
                     Enable-VBRJob -Job $_ -ErrorAction Stop
@@ -163,5 +188,4 @@ process {
             }
         }
     }
-
 }
