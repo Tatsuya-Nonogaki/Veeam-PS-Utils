@@ -4,7 +4,7 @@
 
  .DESCRIPTION
   Disable or enable Veeam jobs. Optionally, you can check the result.
-  Version: 0.1.2
+  Version: 0.1.6
 
   You can specify target jobs in three ways:
    - By providing a file of job names with -ListFile.
@@ -38,7 +38,7 @@
   and -Status.
 
  .PARAMETER Status
-  (Alias -s) Can be used to check the result, i.e., enabled/disabled. Mutually exclusive 
+  (Alias -s) Can be used to check the status, i.e., enabled/disabled. Mutually exclusive 
   with -Enable and -Disable.
 #>
 [CmdletBinding()]
@@ -126,11 +126,11 @@ begin {
 }
 
 process {
-    Import-Module Veeam.Backup.PowerShell -ErrorAction Stop
+    import-module Veeam.Backup.PowerShell -warningaction silentlycontinue -ErrorAction Stop
 
     $AllJobs = Get-VBRJob
     if (!$AllJobs) {
-        Write-Host "No jobs found in Veeam."
+        Write-Host "No jobs found in Veeam." -ForegroundColor Yellow
         exit 1
     }
 
@@ -140,16 +140,23 @@ process {
     if ($Type) {
         $TargetJobs = $TargetJobs | Where-Object { $_.JobType -eq $Type }
         if ($TargetJobs.Count -eq 0) {
-            Write-Host "No jobs found matching type '$Type'."
+            Write-Host "No jobs found matching type '$Type'." -ForegroundColor Yellow
             exit 1
         }
     }
 
     # Filter by JobNamesFromFile
     if ($JobNamesFromFile.Count -gt 0) {
+        # Precheck non-existent job names
+        foreach ($name in $JobNamesFromFile) {
+            if (-not ($AllJobs | Where-Object { $_.Name -eq $name })) {
+                Write-Host "- No such job: $name" -ForegroundColor Yellow
+            }
+        }
+
         $TargetJobs = $TargetJobs | Where-Object { $JobNamesFromFile -contains $_.Name }
         if ($TargetJobs.Count -eq 0) {
-            Write-Host "No jobs found matching the names in '$ListFilePath'."
+            Write-Host "No jobs found matching the names in '$ListFilePath'." -ForegroundColor Yellow
             exit 1
         }
     }
@@ -158,22 +165,22 @@ process {
     if ($JobName) {
         $TargetJobs = $TargetJobs | Where-Object { $_.Name -eq $JobName }
         if ($TargetJobs.Count -eq 0) {
-            Write-Host "No job found with the name '$JobName'."
+            Write-Host "No job found with the name '$JobName'." -ForegroundColor Yellow
             exit 1
         }
     }
 
     if ($TargetJobs.Count -eq 0) {
-        Write-Host "No matching jobs found for the given criteria."
+        Write-Host "No matching jobs found for the given criteria." -ForegroundColor Yellow
         exit 1
     }
 
     switch ($Mode) {
         "Status" {
-            Write-Host "Status of the following job(s):"
+            Write-Host "Status of the job(s):"
             $TargetJobs | ForEach-Object {
-                $status = if ($_.IsScheduleEnabled) { "Enabled" } else { "Disabled" }
-                Write-Host ("- {0}: {1}" -f $_.Name, $status)
+                $jobStatus = if ($_.IsScheduleEnabled) { "Enabled" } else { "Disabled" }
+                Write-Host ("- {0}	{1}" -f $_.Name, $jobStatus)
             }
         }
         "Disable" {
@@ -181,12 +188,12 @@ process {
             $TargetJobs | ForEach-Object { Write-Host "- $($_.Name)" }
             $Confirm = Read-Host "Proceed to Disable these job(s)? (Y/N)"
             if ($Confirm -notin @("Y", "y")) {
-                Write-Host "Operation cancelled."
+                Write-Host "Operation cancelled." -ForegroundColor Yellow
                 exit 0
             }
             $TargetJobs | ForEach-Object {
                 try {
-                    Disable-VBRJob -Job $_ -ErrorAction Stop
+                    Disable-VBRJob -Job $_ -ErrorAction Stop | Out-Null
                     Write-Host "Disabled: $($_.Name)"
                 } catch {
                     Write-Warning "Failed to disable: $($_.Name) - $_"
@@ -198,12 +205,12 @@ process {
             $TargetJobs | ForEach-Object { Write-Host "- $($_.Name)" }
             $Confirm = Read-Host "Proceed to Enable these job(s)? (Y/N)"
             if ($Confirm -notin @("Y", "y")) {
-                Write-Host "Operation cancelled."
+                Write-Host "Operation cancelled." -ForegroundColor Yellow
                 exit 0
             }
             $TargetJobs | ForEach-Object {
                 try {
-                    Enable-VBRJob -Job $_ -ErrorAction Stop
+                    Enable-VBRJob -Job $_ -ErrorAction Stop | Out-Null
                     Write-Host "Enabled: $($_.Name)"
                 } catch {
                     Write-Warning "Failed to enable: $($_.Name) - $_"
