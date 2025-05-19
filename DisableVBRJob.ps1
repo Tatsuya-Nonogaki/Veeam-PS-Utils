@@ -1,51 +1,57 @@
 <#
  .SYNOPSIS
-  Provides a quick and managed way to disable or enable VBR jobs.
+  Disable, enable or show status of Veeam jobs by list, type, or direct job name.
 
  .DESCRIPTION
-  This script provides a quick and managed way to disable or enable VBR jobs.
-  Version: 0.1.2beta
+  Disable, enable or show status of Veeam jobs.  
+  Version: 0.1.2
 
-  -- draft --
-  - You can disable, enable or print status of the Jobs.
-  - Jobs can be filtered by one of;
-    - A list file (-ListFile), in wihch target Jobs are written one per line.
-    - A Job name (-JobName), mutually exclusive with -ListFile. Can be used for a sigle Job.
-    - A Job type (-Type) such as `Backup', 'Replica'. If used with -ListFile or -JobName, 
-      they are And'ed with this. If used alone, all Jobs of the type is to be targeted.
-  -- --
+  You can specify target jobs in three ways:
+   - By providing a file of job names with -ListFile.
+   - By specifying a single job directly with -JobName.
+   - By specifying a job type with -Type.
+  At least one of the selection methods must be provided.
+  Method -JobName is mutually exclusive with -ListFile.
+  If more than one selection method is provided, they are combined (AND logic).
+  If only -Type is used, all jobs of that type will be selected.
 
  .PARAMETER ListFile
   (Alias -f) A list file from which the target Job names are read. If special keyword 
   'default' is specified, the default file defined by $defaultListFile in the script is 
-  used. Either this or -JobName must be specified.
+  used. Cannot be combined with -JobName. Either this, -Type or -JobName must be specified.
 
  .PARAMETER JobName
-  (Alias -n) A spacific Job name. Mutually exclusive with -ListFile. Can be used insted of 
-  -ListFileIf if the target to process is one single Job.
+  (Alias -n) Specify the name of a single job directly. Cannot be combined with -ListFile.
+  Either this, -ListFile or -Type must be specified.
 
  .PARAMETER Type
-  (Alias -t) Job type. Must be one of 'backup', 'replica' or another VBR Job type.
+  (Alias -t) Job type. Must be one of 'backup', 'replica' or another VBR job type.
+  Either this, -ListFile or -JobName must be specified.
 
  .PARAMETER Disable
-  (Alias -d) Specifies the intended action is disabling the Jobs. Mutually exclusive with 
-  -Enable and -Status. If neither -Disable nor -Enable is specified, This is the default.
+  (Alias -d) Specifies the intended action is disabling the jobs. Mutually exclusive with 
+  -Enable and -Status. If neither -Disable nor -Enable nor -Status is specified, This is 
+  the default.
 
  .PARAMETER Enable
   (Alias -e) Specifies the intended action is enabling. Mutually exclusive with -Disable 
   and -Status.
 
  .PARAMETER Status
-  (Alias -s) Show the enable/disable status of the Jobs. Mutually exclusive with -Enable 
+  (Alias -s) Show the enable/disable status of the jobs. Mutually exclusive with -Enable 
   and -Disable.
 #>
 [CmdletBinding()]
 Param(
-  [Parameter(Position=0)]
+  [Parameter()]
   [Alias("f")]
   [string]$ListFile,
 
-  [Parameter(Position=1)]
+  [Parameter()]
+  [Alias("n")]
+  [string]$JobName,
+
+  [Parameter()]
   [Alias("t")]
   [string]$Type,
 
@@ -76,6 +82,15 @@ begin {
         throw "Error: -Disable, -Enable, and -Status are mutually exclusive. Specify only one."
     }
 
+    if (-not $ListFile -and -not $Type -and -not $JobName) {
+        throw "Error: At least one of -ListFile, -Type, or -JobName must be specified."
+    }
+
+    if ($ListFile -and $JobName) {
+        throw "Error: -ListFile and -JobName cannot be specified together."
+    }
+
+    # Set operation Mode
     if ($Status) {
         $Mode = "Status"
     } elseif ($Enable) {
@@ -84,14 +99,12 @@ begin {
         $Mode = "Disable"
     }
 
-    if (-not $ListFile -and -not $Type) {
-        throw "Error: Either -ListFile or -Type (or both) must be specified."
-    }
-
+    # Convert Type to title case for future reference.
     if ($Type) {
         $Type = (Get-Culture).TextInfo.ToTitleCase($Type.ToLower())
     }
 
+    # Load job names from file
     if ($ListFile -eq "default") {
         $ListFilePath = $defaultListFile
     } elseif ($ListFile) {
@@ -100,7 +113,6 @@ begin {
         $ListFilePath = $null
     }
 
-    # Load Job names from file if specified
     $JobNamesFromFile = @()
     if ($ListFilePath) {
         if (-not (Test-Path $ListFilePath)) {
@@ -108,7 +120,7 @@ begin {
         }
         $JobNamesFromFile = Get-Content $ListFilePath | Where-Object { $_ -and $_.Trim() -ne "" }
         if ($JobNamesFromFile.Count -eq 0) {
-            throw "Error: No Job names found in list file: $ListFilePath"
+            throw "Error: No job names found in list file: $ListFilePath"
         }
     }
 }
@@ -118,30 +130,41 @@ process {
 
     $AllJobs = Get-VBRJob
     if (!$AllJobs) {
-        Write-Host "No Jobs found in Veeam."
+        Write-Host "No jobs found in Veeam."
         exit 1
     }
 
     $TargetJobs = $AllJobs
 
+    # Filter by Type
     if ($Type) {
         $TargetJobs = $TargetJobs | Where-Object { $_.JobType -eq $Type }
         if ($TargetJobs.Count -eq 0) {
-            Write-Host "No Jobs found matching type '$Type'."
+            Write-Host "No jobs found matching type '$Type'."
             exit 1
         }
     }
 
+    # Filter by JobNamesFromFile
     if ($JobNamesFromFile.Count -gt 0) {
         $TargetJobs = $TargetJobs | Where-Object { $JobNamesFromFile -contains $_.Name }
         if ($TargetJobs.Count -eq 0) {
-            Write-Host "No Jobs found matching the names in '$ListFilePath'."
+            Write-Host "No jobs found matching the names in '$ListFilePath'."
+            exit 1
+        }
+    }
+
+    # Filter by JobName
+    if ($JobName) {
+        $TargetJobs = $TargetJobs | Where-Object { $_.Name -eq $JobName }
+        if ($TargetJobs.Count -eq 0) {
+            Write-Host "No job found with the name '$JobName'."
             exit 1
         }
     }
 
     if ($TargetJobs.Count -eq 0) {
-        Write-Host "No matching Jobs found for the given criteria."
+        Write-Host "No matching jobs found for the given criteria."
         exit 1
     }
 
