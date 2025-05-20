@@ -5,7 +5,7 @@
  .DESCRIPTION
   Runs the specified VBR Job. The job status can be obtained via log file 
   and/or exit code of the script.
-  Version: 0.5.2
+  Version: 0.5.3
 
   Exit codes:
        0: Job finished with Success status.
@@ -74,7 +74,7 @@ Param(
 
 $scriptdir = Split-Path -Path $myInvocation.MyCommand.Path -Parent
 
-import-module Veeam.Backup.PowerShell -warningaction silentlycontinue
+import-module Veeam.Backup.PowerShell -warningaction silentlycontinue -ErrorAction Stop
 
 # Read config file in.
 if ($Config) {

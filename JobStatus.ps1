@@ -5,7 +5,7 @@
  .DESCRIPTION
   Get the last result of specified VBR Job. The job status can be grasped 
   via log file and/or exit code of the script.
-  Version: 0.7.1
+  Version: 0.7.2
   
   Exit codes:
        0: Job finished with Success status.
@@ -53,7 +53,7 @@ $Set_Log = 'jobstatus.log'
 
 $scriptdir = Split-Path -Path $myInvocation.MyCommand.Path -Parent
 
-import-module Veeam.Backup.PowerShell -warningaction silentlycontinue
+import-module Veeam.Backup.PowerShell -warningaction silentlycontinue -ErrorAction Stop
 
 if ($JobName.length -eq 0) {
     Get-Help $myInvocation.MyCommand.Path

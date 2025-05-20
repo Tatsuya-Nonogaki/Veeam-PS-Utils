@@ -4,7 +4,7 @@
 
  .DESCRIPTION
   Output Job List to a CSV file.
-  Version: 0.3.3
+  Version: 0.3.4
 
   The output CSV consists of following fields.
   
@@ -88,7 +88,7 @@ $LogBaseName = 'joblist-%.csv'
 
 $scriptdir = Split-Path -Path $myInvocation.MyCommand.Path -Parent
 
-import-module Veeam.Backup.PowerShell -warningaction silentlycontinue
+import-module Veeam.Backup.PowerShell -warningaction silentlycontinue -ErrorAction Stop
 
 if ($Log) {
     $logname = $Log
