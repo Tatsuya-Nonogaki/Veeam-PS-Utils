@@ -3,8 +3,8 @@
   Disable or enable Veeam jobs by list, type, or direct job name.
 
  .DESCRIPTION
-  Disable or enable Veeam jobs. Optionally, you can check the current status.
-  Version: 0.1.8a
+  Disable or enable Veeam jobs. You can check the current status, as well.
+  Version: 0.1.8
 
   You can specify target jobs in three ways:
    - By providing a file of job names with -ListFile.
@@ -194,7 +194,7 @@ process {
             $TargetJobs | ForEach-Object {
                 # Check if job is set to "Run automatically"
                 if ($_.Options.JobOptions.RunManually) {
-                    Write-Host ("Skipping job '{0}': operation is not possible because 'Run automatically' is not selected in its 'schedule' settings." -f $_.Name) -ForegroundColor Yellow
+                    Write-Host ("Skipping '{0}': cannot Disable; 'Run automatically' is unchecked in Schedule." -f $_.Name) -ForegroundColor Yellow
                     return
                 }
                 try {
@@ -216,7 +216,7 @@ process {
             $TargetJobs | ForEach-Object {
                 # Check if job is set to "Run automatically"
                 if ($_.Options.JobOptions.RunManually) {
-                    Write-Host ("Skipping job '{0}': operation is not possible because 'Run automatically' is not selected in its 'schedule' settings." -f $_.Name) -ForegroundColor Yellow
+                    Write-Host ("Skipping '{0}': cannot Enable; 'Run automatically' is unchecked in Schedule." -f $_.Name) -ForegroundColor Yellow
                     return
                 }
                 try {
