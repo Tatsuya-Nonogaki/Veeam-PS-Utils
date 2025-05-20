@@ -30,7 +30,7 @@
 
  .PARAMETER Disable
   (Alias -d) Specifies the intended action is disabling the jobs. Mutually exclusive with 
-  -Enable and -Status. If neither -Disable, -Enable nor -Status is specified, this is the 
+  -Enable and -Status. If neither -Disable, -Enable, nor -Status is specified, this is the 
   default action.
 
  .PARAMETER Enable
