@@ -4,7 +4,7 @@
 
  .DESCRIPTION
   Disable or enable Veeam jobs. You can check the current status, as well.
-  Version: 0.2.0
+  Version: 0.2.1
 
   You can specify target jobs in three ways:
    - By providing a file of job names with -ListFile.
@@ -189,7 +189,7 @@ process {
     if ($IsSureBackupMode) {
         switch ($Mode) {
             "Status" {
-                Write-Host "Status of the SureBackup job(s):"
+                Write-Host "Status of the job(s):"
                 $TargetJobs | ForEach-Object {
                     $jobStatus = if ($_.IsEnabled) { "Enabled" } else { "Disabled" }
                     Write-Host ("- {0}`t{1}" -f $_.Name, $jobStatus)
