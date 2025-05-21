@@ -4,7 +4,7 @@
 
  .DESCRIPTION
   Disable or enable Veeam jobs. You can check the current status, as well.
-  Version: 0.1.8
+  Version: 0.2.0
 
   You can specify target jobs in three ways:
    - By providing a file of job names with -ListFile.
@@ -25,8 +25,8 @@
   Either this, -ListFile, or -Type must be specified.
 
  .PARAMETER Type
-  (Alias -t) Job type. Must be one of 'backup', 'replica', or another VBR job type.
-  Either this, -ListFile, or -JobName must be specified.
+  (Alias -t) Job type. Must be one of 'backup', 'replica', 'surebackup', or another VBR job 
+  type. Either this, -ListFile, or -JobName must be specified.
 
  .PARAMETER Disable
   (Alias -d) Specifies the intended action is disabling the jobs. Mutually exclusive with 
@@ -99,11 +99,6 @@ begin {
         $Mode = "Disable"
     }
 
-    # Convert Type to title case for future reference.
-    if ($Type) {
-        $Type = (Get-Culture).TextInfo.ToTitleCase($Type.ToLower())
-    }
-
     # Load job names from file
     if ($ListFile -eq "default") {
         $ListFilePath = $defaultListFile
@@ -126,19 +121,34 @@ begin {
 }
 
 process {
-    import-module Veeam.Backup.PowerShell -warningaction silentlycontinue -ErrorAction Stop
+    Import-Module Veeam.Backup.PowerShell -WarningAction SilentlyContinue -ErrorAction Stop
 
-    $AllJobs = Get-VBRJob
-    if (!$AllJobs) {
-        Write-Host "No jobs found in Veeam." -ForegroundColor Yellow
-        exit 1
+    $typeNorm = if ($Type) { $Type.ToLower() } else { $null }
+
+    # Determine job source: classic jobs or SureBackup jobs
+    $AllJobs = @()
+    $IsSureBackupMode = $false
+    if ($typeNorm -eq "surebackup") {
+        $IsSureBackupMode = $true
+        $AllJobs = Get-VBRSureBackupJob
+        if (!$AllJobs) {
+            Write-Host "No SureBackup jobs found in Veeam." -ForegroundColor Yellow
+            exit 1
+        }
+    } else {
+        $AllJobs = Get-VBRJob
+        if (!$AllJobs) {
+            Write-Host "No jobs found in Veeam." -ForegroundColor Yellow
+            exit 1
+        }
     }
 
     $TargetJobs = $AllJobs
 
-    # Filter by Type
-    if ($Type) {
-        $TargetJobs = $TargetJobs | Where-Object { $_.JobType -eq $Type }
+    # Filter by Type for classic jobs
+    if ($Type -and -not $IsSureBackupMode) {
+        $TypeTitle = (Get-Culture).TextInfo.ToTitleCase($Type.ToLower())
+        $TargetJobs = $TargetJobs | Where-Object { $_.JobType -eq $TypeTitle }
         if ($TargetJobs.Count -eq 0) {
             Write-Host "No jobs found matching type '$Type'." -ForegroundColor Yellow
             exit 1
@@ -175,12 +185,71 @@ process {
         exit 1
     }
 
+    # SureBackup-specific action logic
+    if ($IsSureBackupMode) {
+        switch ($Mode) {
+            "Status" {
+                Write-Host "Status of the SureBackup job(s):"
+                $TargetJobs | ForEach-Object {
+                    $jobStatus = if ($_.IsEnabled) { "Enabled" } else { "Disabled" }
+                    Write-Host ("- {0}`t{1}" -f $_.Name, $jobStatus)
+                }
+            }
+            "Disable" {
+                Write-Host "Disable the following SureBackup job(s):"
+                $TargetJobs | ForEach-Object { Write-Host "- $($_.Name)" }
+                $Confirm = Read-Host "Proceed to Disable these SureBackup job(s)? (Y/N)"
+                if ($Confirm -notin @("Y", "y")) {
+                    Write-Host "Operation cancelled." -ForegroundColor Yellow
+                    exit 0
+                }
+                $TargetJobs | ForEach-Object {
+                    # Check if job is set to "Run automatically"
+                    if (!$_.ScheduleEnabled) {
+                        Write-Host ("Skipping '{0}': cannot {1}; 'Run automatically' is unchecked in Schedule." -f $_.Name, $Mode) -ForegroundColor Yellow
+                        return
+                    }
+                    try {
+                        Disable-VBRSureBackupJob -Job $_ -ErrorAction Stop | Out-Null
+                        Write-Host "Disabled: $($_.Name)"
+                    } catch {
+                        Write-Warning "Failed to disable: $($_.Name) - $_"
+                    }
+                }
+            }
+            "Enable" {
+                Write-Host "Enable the following SureBackup job(s):"
+                $TargetJobs | ForEach-Object { Write-Host "- $($_.Name)" }
+                $Confirm = Read-Host "Proceed to Enable these SureBackup job(s)? (Y/N)"
+                if ($Confirm -notin @("Y", "y")) {
+                    Write-Host "Operation cancelled." -ForegroundColor Yellow
+                    exit 0
+                }
+                $TargetJobs | ForEach-Object {
+                    # Check if job is set to "Run automatically"
+                    if (!$_.ScheduleEnabled) {
+                        Write-Host ("Skipping '{0}': cannot {1}; 'Run automatically' is unchecked in Schedule." -f $_.Name, $Mode) -ForegroundColor Yellow
+                        return
+                    }
+                    try {
+                        Enable-VBRSureBackupJob -Job $_ -ErrorAction Stop | Out-Null
+                        Write-Host "Enabled: $($_.Name)"
+                    } catch {
+                        Write-Warning "Failed to enable: $($_.Name) - $_"
+                    }
+                }
+            }
+        }
+        return
+    }
+
+    # Classic job action logic
     switch ($Mode) {
         "Status" {
             Write-Host "Status of the job(s):"
             $TargetJobs | ForEach-Object {
                 $jobStatus = if ($_.IsScheduleEnabled) { "Enabled" } else { "Disabled" }
-                Write-Host ("- {0}	{1}" -f $_.Name, $jobStatus)
+                Write-Host ("- {0}`t{1}" -f $_.Name, $jobStatus)
             }
         }
         "Disable" {
@@ -194,7 +263,7 @@ process {
             $TargetJobs | ForEach-Object {
                 # Check if job is set to "Run automatically"
                 if ($_.Options.JobOptions.RunManually) {
-                    Write-Host ("Skipping '{0}': cannot Disable; 'Run automatically' is unchecked in Schedule." -f $_.Name) -ForegroundColor Yellow
+                    Write-Host ("Skipping '{0}': cannot {1}; 'Run automatically' is unchecked in Schedule." -f $_.Name, $Mode) -ForegroundColor Yellow
                     return
                 }
                 try {
@@ -216,7 +285,7 @@ process {
             $TargetJobs | ForEach-Object {
                 # Check if job is set to "Run automatically"
                 if ($_.Options.JobOptions.RunManually) {
-                    Write-Host ("Skipping '{0}': cannot Enable; 'Run automatically' is unchecked in Schedule." -f $_.Name) -ForegroundColor Yellow
+                    Write-Host ("Skipping '{0}': cannot {1}; 'Run automatically' is unchecked in Schedule." -f $_.Name, $Mode) -ForegroundColor Yellow
                     return
                 }
                 try {
