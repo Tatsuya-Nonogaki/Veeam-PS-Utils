@@ -193,7 +193,8 @@ VBRJobWrapper.bat WeeklyBackup -o "-FullBackup -RetryBackup"
 ### 6. `DisableVBRJob.ps1`
 
 #### Overview
-The `DisableVBRJob.ps1` script enables, disables, or checks the status of Veeam Backup & Replication jobs. It supports targeting jobs by name, type, or a list file, and provides pre-checks for job existence and scheduling settings. This script is useful for maintenance, automation, or scheduled operational tasks.
+The `DisableVBRJob.ps1` script enables, disables, or checks the status of Veeam Backup & Replication jobs. It supports targeting jobs by name, type, or a list file, and provides pre-checks for job existence and scheduling settings. This script is useful for maintenance, automation, or scheduled operational tasks.  
+**As of v0.2.0, the script is tested for both classic jobs (e.g., backup, replica) and SureBackup jobs (type: `surebackup`).**
 
 #### Key Features
 - Enables, disables, or checks the status of one or more Veeam jobs.
@@ -206,7 +207,7 @@ The `DisableVBRJob.ps1` script enables, disables, or checks the status of Veeam 
 #### Parameters
 - **`-ListFile` (Alias: `-f`)**: Reads a list of job names from a file. Use `'default'` to refer to the script's default list file. Cannot be combined with `-JobName`.
 - **`-JobName` (Alias: `-n`)**: Specifies a single job name directly. Cannot be combined with `-ListFile`.
-- **`-Type` (Alias: `-t`)**: Filters jobs by type (e.g., `backup`, `replica`).
+- **`-Type` (Alias: `-t`)**: Filters jobs by type (`backup`, `replica`, or `surebackup`).
 - **`-Disable` (Alias: `-d`)**: Disables the target jobs. Mutually exclusive with `-Enable` and `-Status`. Default if no action is specified.
 - **`-Enable` (Alias: `-e`)**: Enables the target jobs. Mutually exclusive with `-Disable` and `-Status`.
 - **`-Status` (Alias: `-s`)**: Shows the enable/disable status of the target jobs. Mutually exclusive with `-Enable` and `-Disable`.
@@ -222,10 +223,10 @@ The `DisableVBRJob.ps1` script enables, disables, or checks the status of Veeam 
 .\DisableVBRJob.ps1 -ListFile jobs_to_disable.txt -Type backup -Disable
 
 # Enable a single job by name
-.\DisableVBRJob.ps1 -JobName "WeeklyBackup" -Enable
+.\DisableVBRJob.ps1 -JobName "WeeklyReplication" -Enable
 
-# Show the status of all replica jobs
-.\DisableVBRJob.ps1 -Type replica -Status
+# Show the status of all SureBackup jobs
+.\DisableVBRJob.ps1 -Type surebackup -Status
 ```
 
 ---
