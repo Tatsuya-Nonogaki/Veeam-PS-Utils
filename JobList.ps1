@@ -4,10 +4,10 @@
 
  .DESCRIPTION
   Output Job List to a CSV file.
-  Version: 0.4.0beta
+  Version: 0.4.0beta-surebackup
 
-  The output CSV consists of the following fields,
-  which may vary depending on the job 'Type' argument.
+  The output CSV consists of following fields.
+  Fields may vary depending on the job 'Type' argument.
 
   *Name
     Job Name.
@@ -18,34 +18,37 @@
   *Description
     Description field of the Job.
 
-  *Sources / LinkedJob
-    - For Backup/Replica: Source objects of backup/replication.
-    - For SureBackup: Linked Job (placeholder).
+  *Sources
+    Source objects of backup/replication.
+    For SureBackup, this field is replaced by LinkedJob (see below).
+
+  *LinkedJob (SureBackup only)
+    Linked job(s) for the SureBackup job.
 
   *TargetRepository, TargetDatastore, etc.
     Various properties depending on the job 'Type' argument.
 
   *RestorePoints
     Restore points to keep.
-  
+
   *IsScheduleEnabled
     'FALSE' indicates the Job will not run automatically because of 'Disable' operation 
     on the Jobs list pane.
-  
+
   *RunAutomatically
     'FALSE' indicates the Job will not run automatically because 'Run the job automatically' 
     check box is unchecked in Schedule page of the Job configuration.
-  
+
   *DailyStartTime
     Configured start time at the 'Daily at this time' field of Schedule page of the Job 
     configuration. Usually ignorable on a Periodically scheduled Job.
-  
+
   *Periodically
     Interval configured at 'Periodically every' field of the Schedule.
-  
+
   *HourlyOffset
     Time offset configured at 'Start time within an hour' field of Periodical Schedule.
-  
+
   *IsRunning
     The Job was running at the moment the list was acquired.
 
@@ -59,7 +62,7 @@
     Duration of the last job calculated from SessionStart and SessionEnd.
 
  .PARAMETER Type
-  (Alias -t) Mandatory. Job type. Must be one of 'backup', 'replica', 'surebackup'.
+  (Alias -t) Mandatory. Job type. Must be either 'backup', 'replica', or 'surebackup'.
 
  .PARAMETER Log
   (Alias -l) Output file path. If it doesn't contain '\', it is assumed in the script dir.
@@ -131,8 +134,8 @@ function Get-JobData {
         if ($SessionStart -and $SessionEnd) {
             $startTime = [datetime]::ParseExact($SessionStart, "yyyy/MM/dd HH:mm:ss", $null)
             $endTime = [datetime]::ParseExact($SessionEnd, "yyyy/MM/dd HH:mm:ss", $null)
-            $formattedDuration = $endTime - $startTime
-            $formattedDuration = $formattedDuration.ToString("hh\:mm\:ss")
+            $duration = $endTime - $startTime
+            $formattedDuration = $duration.ToString("hh\:mm\:ss")
         } else {
             $formattedDuration = $null
         }
@@ -205,43 +208,56 @@ function Get-JobData {
 function Get-SureBackupJobData {
     param(
         [Parameter()]
-        [Object]$job
+        [Object]$job,
+        [switch]$Stat
     )
 
-    $LastSession = $job.FindLastSession()
-
-    if ($LastSession) {
-        $SessionStart  = if ((Get-Date $LastSession.CreationTime) -gt (Get-Date 1970-01-01)) { Get-Date $LastSession.CreationTime -Format "yyyy/MM/dd HH:mm:ss" } else { $null }
-        $SessionResult = if ($SessionStart) { $LastSession.Result } else { $null }
-        $SessionEnd    = if ((Get-Date $LastSession.EndTime) -gt (Get-Date 1970-01-01)) { Get-Date $LastSession.EndTime -Format "yyyy/MM/dd HH:mm:ss" } else { $null }
-
-        if ($SessionStart -and $SessionEnd) {
-            $startTime = [datetime]::ParseExact($SessionStart, "yyyy/MM/dd HH:mm:ss", $null)
-            $endTime = [datetime]::ParseExact($SessionEnd, "yyyy/MM/dd HH:mm:ss", $null)
-            $formattedDuration = $endTime - $startTime
-            $formattedDuration = $formattedDuration.ToString("hh\:mm\:ss")
-        } else {
-            $formattedDuration = $null
-        }
+    $LinkedJob = $null
+    if ($job.LinkedJob -and $job.LinkedJob.Job) {
+        $LinkedJob = $job.LinkedJob.Job.Name -join ";"
     }
 
-    # Placeholders for SureBackup-specific fields.
-    # You can update these as you explore the SureBackup job object properties.
+    # Placeholders for scheduling-related fields, to be filled in after property research.
+    $DailyStartTime = $null
+    $Periodically = $null
+    $HourlyOffset = $null
+
     $props = [PSCustomObject]@{
         Name = $job.Name
         JobType = "SureBackup"
         Description = $job.Description
-        LinkedJob = $job.LinkedJob.Job.Name -join ";"
+        LinkedJob = $LinkedJob
         IsScheduleEnabled = $job.IsEnabled
         RunAutomatically = $job.ScheduleEnabled
-        DailyStartTime = $null # Placeholder: fill with actual property if found
-        Periodically = $null   # Placeholder: fill with actual property if found
-        HourlyOffset = $null   # Placeholder: fill with actual property if found
+        DailyStartTime = $DailyStartTime
+        Periodically = $Periodically
+        HourlyOffset = $HourlyOffset
     }
 
     if ($Stat) {
-        $props | Add-Member -MemberType NoteProperty -Name "IsRunning" -Value $job.IsRunning
-        $props | Add-Member -MemberType NoteProperty -Name "LastResult" -Value $SessionResult
+        $SessionStart = $SessionEnd = $LastResult = $formattedDuration = $null
+        $IsRunning = $null
+        try {
+            $sessions = Get-VBRSureBackupSession -Name $job.Name -ErrorAction Stop
+            if ($sessions) {
+                $lastSession = $sessions | Sort-Object -Property CreationTime -Descending | Select-Object -First 1
+                if ($lastSession) {
+                    $SessionStart  = if ($lastSession.CreationTime) { Get-Date $lastSession.CreationTime -Format "yyyy/MM/dd HH:mm:ss" } else { $null }
+                    $SessionEnd = if ((Get-Date $lastSession.EndTime) -gt (Get-Date "1970-01-01")) { Get-Date $lastSession.EndTime -Format "yyyy/MM/dd HH:mm:ss" } else { $null }
+                    $LastResult = $lastSession.Result
+                    $IsRunning = ($lastSession.State -eq "Working")
+                    $formattedDuration = if ($SessionStart -and $SessionEnd) {
+                        $startTime = [datetime]::ParseExact($SessionStart, "yyyy/MM/dd HH:mm:ss", $null)
+                        $endTime = [datetime]::ParseExact($SessionEnd, "yyyy/MM/dd HH:mm:ss", $null)
+                        ($endTime - $startTime).ToString("hh\:mm\:ss")
+                    } else { $null }
+                }
+            }
+        } catch {
+            # No sessions found or job never run, leave as $null
+        }
+        $props | Add-Member -MemberType NoteProperty -Name "IsRunning" -Value $IsRunning
+        $props | Add-Member -MemberType NoteProperty -Name "LastResult" -Value $LastResult
         $props | Add-Member -MemberType NoteProperty -Name "SessionStart" -Value $SessionStart
         $props | Add-Member -MemberType NoteProperty -Name "SessionEnd" -Value $SessionEnd
         $props | Add-Member -MemberType NoteProperty -Name "Duration" -Value $formattedDuration
@@ -253,7 +269,7 @@ function Get-SureBackupJobData {
 if ($Type -eq "surebackup") {
     $jobs = Get-VBRSureBackupJob
     if ($jobs) {
-        $jobData = $jobs | ForEach-Object { Get-SureBackupJobData -job $_ }
+        $jobData = $jobs | ForEach-Object { Get-SureBackupJobData -job $_ -Stat:($Stat) }
         $jobData | Export-Csv -Path $logfile -Encoding UTF8 -NoTypeInformation
     } else {
         Write-Host "No SureBackup jobs found"
