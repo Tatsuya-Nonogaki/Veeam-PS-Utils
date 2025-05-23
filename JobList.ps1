@@ -4,7 +4,7 @@
 
  .DESCRIPTION
   Output Job List to a CSV file.
-  Version: 0.4.0beta-surebackup-02
+  Version: 0.4.0beta-surebackup-03
 
   The output CSV consists of following fields.
   Fields may vary depending on the job 'Type' argument.
