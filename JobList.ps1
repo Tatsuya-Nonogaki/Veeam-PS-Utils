@@ -4,7 +4,7 @@
 
  .DESCRIPTION
   Output Job List to a CSV file.
-  Version: 0.4.0beta-surebackup
+  Version: 0.4.0beta-surebackup-02
 
   The output CSV consists of following fields.
   Fields may vary depending on the job 'Type' argument.
@@ -43,11 +43,14 @@
     Configured start time at the 'Daily at this time' field of Schedule page of the Job 
     configuration. Usually ignorable on a Periodically scheduled Job.
 
-  *Periodically
+  *Periodically (unless SureBackup)
     Interval configured at 'Periodically every' field of the Schedule.
 
-  *HourlyOffset
+  *HourlyOffset (unless SureBackup)
     Time offset configured at 'Start time within an hour' field of Periodical Schedule.
+
+  *AfterJob (SureBackup only)
+    Job configured at 'After the job' field of the Schedule.
 
   *IsRunning
     The Job was running at the moment the list was acquired.
