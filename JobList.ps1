@@ -4,9 +4,9 @@
 
  .DESCRIPTION
   Output Job List to a CSV file.
-  Version: 0.4.0beta-surebackup-03
+  Version: 0.4.1beta-surebackup02
 
-  The output CSV consists of following fields.
+  The output CSV consists of the following fields.
   Fields may vary depending on the job 'Type' argument.
 
   *Name
@@ -41,7 +41,7 @@
 
   *DailyStartTime
     Configured start time at the 'Daily at this time' field of Schedule page of the Job 
-    configuration. Usually ignorable on a Periodically scheduled Job.
+    configuration.
 
   *Periodically (unless SureBackup)
     Interval configured at 'Periodically every' field of the Schedule.
@@ -49,8 +49,13 @@
   *HourlyOffset (unless SureBackup)
     Time offset configured at 'Start time within an hour' field of Periodical Schedule.
 
+  # *MonthlyStartTime (commented out)
+  #   Configured point of time at 'Monthly at this time' fields of the Schedule, in the 
+  #   form, i.e., '22:00 on Fourth Saturday in January, February, ...'.
+
   *AfterJob (SureBackup only)
     Job configured at 'After the job' field of the Schedule.
+    If ScheduleOptions.Type is AfterJob, this column shows the job name, otherwise blank.
 
   *IsRunning
     The Job was running at the moment the list was acquired.
@@ -129,18 +134,17 @@ function Get-JobData {
 
     $LastSession = $job.FindLastSession()
 
+    $SessionStart = $SessionEnd = $SessionResult = $formattedDuration = $null
     if ($LastSession) {
-        $SessionStart  = if ((Get-Date $LastSession.CreationTime) -gt (Get-Date 1970-01-01)) { Get-Date $LastSession.CreationTime -Format "yyyy/MM/dd HH:mm:ss" } else { $null }
-        $SessionResult = if ($SessionStart) { $LastSession.Result } else { $null }
-        $SessionEnd    = if ((Get-Date $LastSession.EndTime) -gt (Get-Date 1970-01-01)) { Get-Date $LastSession.EndTime -Format "yyyy/MM/dd HH:mm:ss" } else { $null }
+        $SessionStart  = if ((Get-Date $LastSession.CreationTime) -gt (Get-Date 1970-01-01)) { Get-Date $LastSession.CreationTime -Format "yyyy/MM/dd HH:mm:ss" }
+        $SessionResult = if ($SessionStart) { $LastSession.Result }
+        $SessionEnd    = if ((Get-Date $LastSession.EndTime) -gt (Get-Date 1970-01-01)) { Get-Date $LastSession.EndTime -Format "yyyy/MM/dd HH:mm:ss" }
 
         if ($SessionStart -and $SessionEnd) {
             $startTime = [datetime]::ParseExact($SessionStart, "yyyy/MM/dd HH:mm:ss", $null)
             $endTime = [datetime]::ParseExact($SessionEnd, "yyyy/MM/dd HH:mm:ss", $null)
             $duration = $endTime - $startTime
             $formattedDuration = $duration.ToString("hh\:mm\:ss")
-        } else {
-            $formattedDuration = $null
         }
     }
 
@@ -153,16 +157,38 @@ function Get-JobData {
         IsScheduleEnabled = $job.IsScheduleEnabled
         RunAutomatically = -not $job.Options.JobOptions.RunManually
         IsRunning = $job.IsRunning
-        DailyStartTime = if ($job.ScheduleOptions.OptionsDaily.TimeLocal) { $job.ScheduleOptions.OptionsDaily.TimeLocal | Get-Date -Format t } else { $null }
-        Periodically = if ($job.ScheduleOptions.OptionsPeriodically.Enabled -eq "True") { ($job.ScheduleOptions.OptionsPeriodically -split ",")[1] -replace '^[^,]*:\s*', '' } else { $null }
-        HourlyOffset = if ($job.ScheduleOptions.OptionsPeriodically.Enabled -eq "True") { $job.ScheduleOptions.OptionsPeriodically.HourlyOffset } else { $null }
+        DailyStartTime = ""
+        #MonthlyStartTime = ""
+        Periodically = ""
+        HourlyOffset = ""
+    }
+
+    if ($job.ScheduleOptions.OptionsDaily.Enabled -eq "True") {
+        $commonProps.DailyStartTime = $job.ScheduleOptions.OptionsDaily.TimeLocal | Get-Date -Format t
+    }
+
+    # # MonthlyStartTime (commented out; see header)
+    # if ($job.ScheduleOptions.OptionsMonthly.Enabled -eq "True") {
+    #     $mo = $job.ScheduleOptions.OptionsMonthly
+    #     $time = $mo.TimeLocal | Get-Date -Format 't'
+    #     $week = $mo.DayNumberInMonth
+    #     $day = $mo.DayOfWeek
+    #     $months = $mo.Months -join ';'
+    #     $commonProps.MonthlyStartTime = "{0} on {1} {2} in {3}" -f $time, $week, $day, $months
+    # }
+
+    # Periodically/HourlyOffset
+    if ($job.ScheduleOptions.OptionsPeriodically.Enabled -eq "True") {
+        $periodSec = $job.ScheduleOptions.OptionsPeriodically.FullPeriod
+        $commonProps.Periodically = "{0} min(s)" -f [int]($periodSec / 60)
+        $commonProps.HourlyOffset = "{0} min(s)" -f ([int]$job.ScheduleOptions.OptionsPeriodically.HourlyOffset)
     }
 
     $specificProps = @{
-        TargetRepository = $job.GetTargetRepository().Name
-        TargetCluster = $job.ViReplicaTargetOptions.ClusterName
-        TargetFolder = $job.ViReplicaTargetOptions.ReplicaTargetVmFolderName
-        TargetDatastore = $job.ViReplicaTargetOptions.DatastoreName
+        TargetRepository = if ($Type -eq "backup") { $job.GetTargetRepository().Name } else { $null }
+        TargetCluster = if ($Type -eq "replica") { $job.ViReplicaTargetOptions.ClusterName } else { $null }
+        TargetFolder = if ($Type -eq "replica") { $job.ViReplicaTargetOptions.ReplicaTargetVmFolderName } else { $null }
+        TargetDatastore = if ($Type -eq "replica") { $job.ViReplicaTargetOptions.DatastoreName } else { $null }
     }
 
     if ($Type -eq "backup") {
@@ -176,6 +202,7 @@ function Get-JobData {
             IsScheduleEnabled = $commonProps.IsScheduleEnabled
             RunAutomatically = $commonProps.RunAutomatically
             DailyStartTime = $commonProps.DailyStartTime
+            #MonthlyStartTime = $commonProps.MonthlyStartTime
             Periodically = $commonProps.Periodically
             HourlyOffset = $commonProps.HourlyOffset
         }
@@ -192,6 +219,7 @@ function Get-JobData {
             IsScheduleEnabled = $commonProps.IsScheduleEnabled
             RunAutomatically = $commonProps.RunAutomatically
             DailyStartTime = $commonProps.DailyStartTime
+            #MonthlyStartTime = $commonProps.MonthlyStartTime
             Periodically = $commonProps.Periodically
             HourlyOffset = $commonProps.HourlyOffset
         }
@@ -220,10 +248,40 @@ function Get-SureBackupJobData {
         $LinkedJob = $job.LinkedJob.Job.Name -join ";"
     }
 
-    # Placeholders for scheduling-related fields, to be filled in after property research.
-    $DailyStartTime = $null
-    $Periodically = $null
-    $HourlyOffset = $null
+    $DailyStartTime = ""
+    #$MonthlyStartTime = ""
+    $AfterJob = ""
+
+    $scheduleType = $job.ScheduleOptions.Type
+
+    if ($scheduleType -eq "Daily") {
+        $period = $job.ScheduleOptions.DailyOptions.Period
+        if ($period) {
+            $DailyStartTime = (Get-Date -Hour $period.Hours -Minute $period.Minutes -Second 0).ToString('t')
+        }
+    }
+
+    # # MonthlyStartTime (commented out; see header)
+    # if ($scheduleType -eq "Monthly") {
+    #     $mo = $job.ScheduleOptions.MonthlyOptions
+    #     if ($mo) {
+    #         $time = $mo.Period
+    #         $week = $mo.DayNumberInMonth
+    #         $day = $mo.DayOfWeek
+    #         $months = $mo.Months -join ';'
+    #         $MonthlyStartTime = "{0} on {1} {2} in {3}" -f $time, $week, $day, $months
+    #     }
+    # }
+
+    if ($scheduleType -eq "AfterJob") {
+        $afterJobId = $job.ScheduleOptions.AfterJobId
+        if ($afterJobId) {
+            $afterJobObj = Get-VBRJob | Where-Object { $_.Id -eq $afterJobId }
+            if ($afterJobObj) {
+                $AfterJob = $afterJobObj.Name
+            }
+        }
+    }
 
     $props = [PSCustomObject]@{
         Name = $job.Name
@@ -233,8 +291,8 @@ function Get-SureBackupJobData {
         IsScheduleEnabled = $job.IsEnabled
         RunAutomatically = $job.ScheduleEnabled
         DailyStartTime = $DailyStartTime
-        Periodically = $Periodically
-        HourlyOffset = $HourlyOffset
+        #MonthlyStartTime = $MonthlyStartTime
+        AfterJob = $AfterJob
     }
 
     if ($Stat) {
@@ -245,15 +303,15 @@ function Get-SureBackupJobData {
             if ($sessions) {
                 $lastSession = $sessions | Sort-Object -Property CreationTime -Descending | Select-Object -First 1
                 if ($lastSession) {
-                    $SessionStart  = if ($lastSession.CreationTime) { Get-Date $lastSession.CreationTime -Format "yyyy/MM/dd HH:mm:ss" } else { $null }
-                    $SessionEnd = if ((Get-Date $lastSession.EndTime) -gt (Get-Date "1970-01-01")) { Get-Date $lastSession.EndTime -Format "yyyy/MM/dd HH:mm:ss" } else { $null }
+                    $SessionStart  = if ($lastSession.CreationTime) { Get-Date $lastSession.CreationTime -Format "yyyy/MM/dd HH:mm:ss" }
+                    $SessionEnd = if ((Get-Date $lastSession.EndTime) -gt (Get-Date "1970-01-01")) { Get-Date $lastSession.EndTime -Format "yyyy/MM/dd HH:mm:ss" }
                     $LastResult = $lastSession.Result
                     $IsRunning = ($lastSession.State -eq "Working")
                     $formattedDuration = if ($SessionStart -and $SessionEnd) {
                         $startTime = [datetime]::ParseExact($SessionStart, "yyyy/MM/dd HH:mm:ss", $null)
                         $endTime = [datetime]::ParseExact($SessionEnd, "yyyy/MM/dd HH:mm:ss", $null)
                         ($endTime - $startTime).ToString("hh\:mm\:ss")
-                    } else { $null }
+                    }
                 }
             }
         } catch {
