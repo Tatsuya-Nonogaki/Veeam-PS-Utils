@@ -4,7 +4,7 @@
 
  .DESCRIPTION
   Output Job List to a CSV file.
-  Version: 0.4.1beta-surebackup03
+  Version: 0.4.1beta-surebackup04
 
   The output CSV consists of the following fields.
   Fields may vary depending on the job 'Type' argument.
@@ -16,10 +16,10 @@
     Backup, Replica, SureBackup, etc.
 
   *Description
-    Description field of the Job.
+    Description field of the job.
 
   *Sources
-    Source objects of backup/replication.
+    Source objects for backup or replication.
     For SureBackup, this field is replaced by LinkedJob (see below).
 
   *LinkedJob (SureBackup only)
@@ -29,45 +29,47 @@
     Various properties depending on the job 'Type' argument.
 
   *RestorePoints
-    Restore points to keep.
+    Number of restore points to keep.
 
   *IsScheduleEnabled
-    'FALSE' indicates the Job will not run automatically because of 'Disable' operation 
-    on the Jobs list pane.
+    'FALSE' indicates the job will not run automatically because it is disabled in the Jobs list pane.
 
   *RunAutomatically
-    'FALSE' indicates the Job will not run automatically because 'Run the job automatically' 
-    check box is unchecked in Schedule page of the Job configuration.
+    'FALSE' indicates the job will not run automatically because the "Run the job automatically" 
+    checkbox is unchecked on the Schedule page of the job configuration.
 
   *DailyStartTime
-    Configured start time at the 'Daily at this time' field of Schedule page of the Job 
-    configuration.
+    Configured start time in the "Daily at this time" field on the Schedule page of the job 
+    configuration. Hidden values (i.e., grayed out in the GUI) will not be shown when the "Daily" 
+    selector is not checked.
 
-  *Periodically (unless SureBackup)
-    Interval configured at 'Periodically every' field of the Schedule.
+  *MonthlyStartTime
+    Configured time in the "Monthly at this time" fields on the Schedule page, in the form, 
+    e.g., '22:00 on Fourth Saturday in January;February;...'. Hidden values (i.e., grayed out in 
+    the GUI) will not be shown when the "Monthly" selector is not checked.
 
-  *HourlyOffset (unless SureBackup)
-    Time offset configured at 'Start time within an hour' field of Periodical Schedule.
+  *Periodically (not applicable for SureBackup)
+    Interval configured in the "Periodically every" field of the Schedule. Hidden values (i.e., 
+    grayed out in the GUI) will not be shown when the "Periodically" selector is not checked.
 
-  # *MonthlyStartTime (commented out)
-  #   Configured point of time at 'Monthly at this time' fields of the Schedule, in the 
-  #   form, i.e., '22:00 on Fourth Saturday in January, February, ...'.
+  *HourlyOffset (not applicable for SureBackup)
+    Time offset configured in the "Start time within an hour" field of the Periodic Schedule.
 
-  *AfterJob (SureBackup only)
-    Job configured at 'After the job' field of the Schedule.
-    If ScheduleOptions.Type is AfterJob, this column shows the job name, otherwise blank.
+  *AfterJob
+    Job configured in the "After the job" field of the Schedule. Hidden values (i.e., grayed out 
+    in the GUI) will not be shown when the "After the job" selector is not checked.
 
   *IsRunning
-    The Job was running at the moment the list was acquired.
+    Indicates whether the job was running at the moment the list was acquired.
 
   *LastResult
     Result of the last job session.
 
   *SessionStart and SessionEnd
-    Start and end time of the last job session.
+    Start and end times of the last job session.
 
   *Duration
-    Duration of the last job calculated from SessionStart and SessionEnd.
+    Duration of the last job, calculated from SessionStart and SessionEnd.
 
  .PARAMETER Type
   (Alias -t) Mandatory. Job type. Must be either 'backup', 'replica', or 'surebackup'.
@@ -158,7 +160,7 @@ function Get-JobData {
         RunAutomatically = -not $job.Options.JobOptions.RunManually
         IsRunning = $job.IsRunning
         DailyStartTime = ""
-        #MonthlyStartTime = ""
+        MonthlyStartTime = ""
         Periodically = ""
         HourlyOffset = ""
     }
@@ -167,17 +169,15 @@ function Get-JobData {
         $commonProps.DailyStartTime = $job.ScheduleOptions.OptionsDaily.TimeLocal | Get-Date -Format t
     }
 
-    # # MonthlyStartTime (commented out; see header)
-    # if ($job.ScheduleOptions.OptionsMonthly.Enabled -eq "True") {
-    #     $mo = $job.ScheduleOptions.OptionsMonthly
-    #     $time = $mo.TimeLocal | Get-Date -Format 't'
-    #     $week = $mo.DayNumberInMonth
-    #     $day = $mo.DayOfWeek
-    #     $months = $mo.Months -join ';'
-    #     $commonProps.MonthlyStartTime = "{0} on {1} {2} in {3}" -f $time, $week, $day, $months
-    # }
+    if ($job.ScheduleOptions.OptionsMonthly.Enabled -eq "True") {
+        $mo = $job.ScheduleOptions.OptionsMonthly
+        $time = $mo.TimeLocal | Get-Date -Format 't'
+        $week = $mo.DayNumberInMonth
+        $day = $mo.DayOfWeek
+        $months = $mo.Months -join ';'
+        $commonProps.MonthlyStartTime = "{0} on {1} {2} in {3}" -f $time, $week, $day, $months
+    }
 
-    # Periodically/HourlyOffset
     if ($job.ScheduleOptions.OptionsPeriodically.Enabled -eq "True") {
         $periodSec = $job.ScheduleOptions.OptionsPeriodically.FullPeriod
         $commonProps.Periodically = "{0} min(s)" -f [int]($periodSec / 60)
@@ -202,7 +202,7 @@ function Get-JobData {
             IsScheduleEnabled = $commonProps.IsScheduleEnabled
             RunAutomatically = $commonProps.RunAutomatically
             DailyStartTime = $commonProps.DailyStartTime
-            #MonthlyStartTime = $commonProps.MonthlyStartTime
+            MonthlyStartTime = $commonProps.MonthlyStartTime
             Periodically = $commonProps.Periodically
             HourlyOffset = $commonProps.HourlyOffset
         }
@@ -219,7 +219,7 @@ function Get-JobData {
             IsScheduleEnabled = $commonProps.IsScheduleEnabled
             RunAutomatically = $commonProps.RunAutomatically
             DailyStartTime = $commonProps.DailyStartTime
-            #MonthlyStartTime = $commonProps.MonthlyStartTime
+            MonthlyStartTime = $commonProps.MonthlyStartTime
             Periodically = $commonProps.Periodically
             HourlyOffset = $commonProps.HourlyOffset
         }
@@ -249,7 +249,7 @@ function Get-SureBackupJobData {
     }
 
     $DailyStartTime = ""
-    #$MonthlyStartTime = ""
+    $MonthlyStartTime = ""
     $AfterJob = ""
 
     $scheduleType = $job.ScheduleOptions.Type
@@ -261,17 +261,16 @@ function Get-SureBackupJobData {
         }
     }
 
-    # # MonthlyStartTime (commented out; see header)
-    # if ($scheduleType -eq "Monthly") {
-    #     $mo = $job.ScheduleOptions.MonthlyOptions
-    #     if ($mo) {
-    #         $time = [datetime]::ParseExact($mo.Period, "HH:mm:ss", $null) | Get-Date -Format 't'
-    #         $week = $mo.DayNumberInMonth
-    #         $day = $mo.DayOfWeek
-    #         $months = $mo.Months -join ';'
-    #         $MonthlyStartTime = "{0} on {1} {2} in {3}" -f $time, $week, $day, $months
-    #     }
-    # }
+    if ($scheduleType -eq "Monthly") {
+        $mo = $job.ScheduleOptions.MonthlyOptions
+        if ($mo) {
+            $time = [datetime]::ParseExact($mo.Period, "HH:mm:ss", $null) | Get-Date -Format 't'
+            $week = $mo.DayNumberInMonth
+            $day = $mo.DayOfWeek
+            $months = $mo.Months -join ';'
+            $MonthlyStartTime = "{0} on {1} {2} in {3}" -f $time, $week, $day, $months
+        }
+    }
 
     if ($scheduleType -eq "AfterJob") {
         $afterJobId = $job.ScheduleOptions.AfterJobId
@@ -291,7 +290,7 @@ function Get-SureBackupJobData {
         IsScheduleEnabled = $job.IsEnabled
         RunAutomatically = $job.ScheduleEnabled
         DailyStartTime = $DailyStartTime
-        #MonthlyStartTime = $MonthlyStartTime
+        MonthlyStartTime = $MonthlyStartTime
         AfterJob = $AfterJob
     }
 
