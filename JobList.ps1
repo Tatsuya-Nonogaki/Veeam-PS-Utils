@@ -4,7 +4,7 @@
 
  .DESCRIPTION
   Output Job List to a CSV file.
-  Version: 0.4.1beta-surebackup02
+  Version: 0.4.1beta-surebackup03
 
   The output CSV consists of the following fields.
   Fields may vary depending on the job 'Type' argument.
@@ -265,7 +265,7 @@ function Get-SureBackupJobData {
     # if ($scheduleType -eq "Monthly") {
     #     $mo = $job.ScheduleOptions.MonthlyOptions
     #     if ($mo) {
-    #         $time = $mo.Period
+    #         $time = [datetime]::ParseExact($mo.Period, "HH:mm:ss", $null) | Get-Date -Format 't'
     #         $week = $mo.DayNumberInMonth
     #         $day = $mo.DayOfWeek
     #         $months = $mo.Months -join ';'
