@@ -4,7 +4,7 @@
 
  .DESCRIPTION
   Output Job List to a CSV file.
-  Version: 0.4.1beta-surebackup04
+  Version: 0.4.1beta-surebackup05
 
   The output CSV consists of the following fields.
   Fields may vary depending on the job 'Type' argument.
@@ -163,6 +163,7 @@ function Get-JobData {
         MonthlyStartTime = ""
         Periodically = ""
         HourlyOffset = ""
+        AfterJob = ""
     }
 
     if ($job.ScheduleOptions.OptionsDaily.Enabled -eq "True") {
@@ -182,6 +183,16 @@ function Get-JobData {
         $periodSec = $job.ScheduleOptions.OptionsPeriodically.FullPeriod
         $commonProps.Periodically = "{0} min(s)" -f [int]($periodSec / 60)
         $commonProps.HourlyOffset = "{0} min(s)" -f ([int]$job.ScheduleOptions.OptionsPeriodically.HourlyOffset)
+    }
+
+    if ($job.ScheduleOptions.OptionsScheduleAfterJob.IsEnabled -eq "True") {
+        $afterJobId = $job.PreviousJobIdInScheduleChain.Guid
+        if ($afterJobId) {
+            $afterJobObj = Get-VBRJob | Where-Object { $_.Id.Guid -eq $afterJobId }
+            if ($afterJobObj) {
+                $commonProps.AfterJob = $afterJobObj.Name
+            }
+        }
     }
 
     $specificProps = @{
@@ -205,6 +216,7 @@ function Get-JobData {
             MonthlyStartTime = $commonProps.MonthlyStartTime
             Periodically = $commonProps.Periodically
             HourlyOffset = $commonProps.HourlyOffset
+            AfterJob = $commonProps.AfterJob
         }
     } elseif ($Type -eq "replica") {
         $orderedProps = [PSCustomObject]@{
@@ -222,6 +234,7 @@ function Get-JobData {
             MonthlyStartTime = $commonProps.MonthlyStartTime
             Periodically = $commonProps.Periodically
             HourlyOffset = $commonProps.HourlyOffset
+            AfterJob = $commonProps.AfterJob
         }
     }
 
