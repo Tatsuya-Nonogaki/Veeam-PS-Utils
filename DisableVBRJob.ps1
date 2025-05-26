@@ -4,7 +4,7 @@
 
  .DESCRIPTION
   Disable or enable Veeam jobs, or check their enable/disable status.
-  Version: 0.3.1
+  Version: 0.3.2
 
   Selection of target jobs requires the -Type parameter (mandatory).
   - If -Type "classic" is used, all non-SureBackup jobs (backup, replica, etc.) are selected.
@@ -131,7 +131,7 @@ process {
         }
         if ($typeNorm -ne "classic") {
             # Specific classic type (backup, replica, backupcopy)
-            $AllJobs = $AllJobs | Where-Object { $_.JobType.ToLower() -eq $typeNorm }
+            $AllJobs = $AllJobs | Where-Object { $_.JobType.ToString().ToLower() -eq $typeNorm }
             if (!$AllJobs) {
                 Write-Host "No jobs of type '$Type' found in Veeam." -ForegroundColor Yellow
                 exit 1
