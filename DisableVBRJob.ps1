@@ -4,7 +4,7 @@
 
  .DESCRIPTION
   Disable or enable Veeam jobs, or check their enable/disable status.
-  Version: 0.3.2
+  Version: 0.3.3
 
   Selection of target jobs requires the -Type parameter (mandatory).
   - If -Type "classic" is used, all non-SureBackup jobs (backup, replica, etc.) are selected.
@@ -77,6 +77,9 @@ begin {
     $typeNorm = $Type.ToLower()
     if ($validTypes -notcontains $typeNorm) {
         throw "Error: Invalid -Type '$Type'. Must be one of: $($validTypes -join ', ')."
+    }
+    if ($typeNorm -eq "backupcopy") {
+        $typeNorm = "simplebackupcopypolicy"
     }
 
     # --- Mutually exclusive: selection methods ---
@@ -198,7 +201,7 @@ process {
                     exit 0
                 }
                 $TargetJobs | ForEach-Object {
-                    if (!$_.ScheduleEnabled) {
+                    if ($typeNorm -ne "simplebackupcopypolicy" -and !$_.ScheduleEnabled) {
                         Write-Host ("Skipping '{0}': cannot {1}; 'Run automatically' is unchecked in Schedule." -f $_.Name, $Mode) -ForegroundColor Yellow
                         return
                     }
@@ -219,7 +222,7 @@ process {
                     exit 0
                 }
                 $TargetJobs | ForEach-Object {
-                    if (!$_.ScheduleEnabled) {
+                    if ($typeNorm -ne "simplebackupcopypolicy" -and !$_.ScheduleEnabled) {
                         Write-Host ("Skipping '{0}': cannot {1}; 'Run automatically' is unchecked in Schedule." -f $_.Name, $Mode) -ForegroundColor Yellow
                         return
                     }
