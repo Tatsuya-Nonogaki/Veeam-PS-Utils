@@ -3,43 +3,40 @@
   Disable or enable Veeam jobs by list, type, or direct job name.
 
  .DESCRIPTION
-  Disable or enable Veeam jobs. You can check the current status, as well.
-  Version: 0.2.1
+  Disable or enable Veeam jobs, or check their enable/disable status.
+  Version: 0.3.1
 
-  You can specify target jobs in three ways:
-   - By providing a file of job names with -ListFile.
-   - By specifying a single job directly with -JobName.
-   - By specifying a job type with -Type.
-  At least one of the selection methods must be provided.
-  Method -JobName is mutually exclusive with -ListFile.
-  If more than one selection method is provided, they are combined (AND logic).
-  If only -Type is used, all jobs of that type will be selected.
+  Selection of target jobs requires the -Type parameter (mandatory).
+  - If -Type "classic" is used, all non-SureBackup jobs (backup, replica, etc.) are selected.
+  - If -Type "surebackup" is used, only SureBackup jobs are selected.
+  - If a specific classic type is used (e.g. "backup", "replica", "backupcopy"), only those jobs are selected.
+
+  You may further specify job(s) by name (-JobName) or by list file (-ListFile).
+  When -ListFile is used, only the jobs with names in the file (AND with the specified -Type) will be acted upon.
+  When -JobName is used, only the job with that name (AND -Type) will be acted upon.
 
  .PARAMETER ListFile
-  (Alias -f) A list file containing the target job names, one per line. If special keyword 
-  'default' is specified, the default file defined by $defaultListFile in this script is 
-  used. Cannot be combined with -JobName. Either this, -Type, or -JobName must be specified.
+  (Alias -f) Path to a file containing job names (one per line). If "default", uses joblist.txt in the script directory.
+  Cannot be combined with -JobName.
 
  .PARAMETER JobName
-  (Alias -n) Specify the name of a single job directly. Cannot be combined with -ListFile.
-  Either this, -ListFile, or -Type must be specified.
+  (Alias -n) Name of a single job. Cannot be combined with -ListFile.
 
  .PARAMETER Type
-  (Alias -t) Job type. Must be one of 'backup', 'replica', 'surebackup', or another VBR job 
-  type. Either this, -ListFile, or -JobName must be specified.
+  (Alias -t) Mandatory. Must be "classic", "surebackup", or a specific classic job type ("backup", "replica", "backupcopy").
+  - "classic": all non-SureBackup jobs (backup, replica, etc.)
+  - "surebackup": SureBackup jobs only
+  - Specific type: only jobs of that type (e.g. "backup", "replica", "backupcopy").
 
  .PARAMETER Disable
-  (Alias -d) Specifies the intended action is disabling the jobs. Mutually exclusive with 
-  -Enable and -Status. If neither -Disable, -Enable, nor -Status is specified, this is the 
-  default action.
+  (Alias -d) Disable selected jobs. Mutually exclusive with -Enable and -Status.
+  This is the default action if none of -Disable, -Enable, or -Status are specified.
 
  .PARAMETER Enable
-  (Alias -e) Specifies the intended action is enabling. Mutually exclusive with -Disable 
-  and -Status.
+  (Alias -e) Enable selected jobs. Mutually exclusive with -Disable and -Status.
 
  .PARAMETER Status
-  (Alias -s) Can be used to check the status, i.e., enabled/disabled. Mutually exclusive 
-  with -Enable and -Disable.
+  (Alias -s) Show enable/disable status. Mutually exclusive with -Enable and -Disable.
 #>
 [CmdletBinding()]
 Param(
@@ -72,34 +69,27 @@ begin {
     $scriptdir = Split-Path -Path $myInvocation.MyCommand.Path -Parent
     $defaultListFile = Join-Path $scriptdir "joblist.txt"
 
-    if ($PSBoundParameters.Count -eq 0) {
-        Get-Help $MyInvocation.InvocationName
-        exit 1
+    # --- MANDATORY: -Type ---
+    $validTypes = @("classic", "surebackup", "backup", "replica", "backupcopy")
+    if (-not $Type) {
+        throw "Error: -Type is mandatory. Must be one of: $($validTypes -join ', ')."
+    }
+    $typeNorm = $Type.ToLower()
+    if ($validTypes -notcontains $typeNorm) {
+        throw "Error: Invalid -Type '$Type'. Must be one of: $($validTypes -join ', ')."
     }
 
+    # --- Mutually exclusive: selection methods ---
+    if ($ListFile -and $JobName) {
+        throw "Error: -ListFile and -JobName cannot be specified together."
+    }
+
+    # --- Mutually exclusive: actions ---
     $switchCount = @($Disable, $Enable, $Status) | Where-Object { $_ } | Measure-Object | Select-Object -ExpandProperty Count
     if ($switchCount -gt 1) {
         throw "Error: -Disable, -Enable, and -Status are mutually exclusive. Specify only one."
     }
 
-    if (-not $ListFile -and -not $Type -and -not $JobName) {
-        throw "Error: At least one of -ListFile, -Type, or -JobName must be specified."
-    }
-
-    if ($ListFile -and $JobName) {
-        throw "Error: -ListFile and -JobName cannot be specified together."
-    }
-
-    # Set operation Mode
-    if ($Status) {
-        $Mode = "Status"
-    } elseif ($Enable) {
-        $Mode = "Enable"
-    } else {
-        $Mode = "Disable"
-    }
-
-    # Load job names from file
     if ($ListFile -eq "default") {
         $ListFilePath = $defaultListFile
     } elseif ($ListFile) {
@@ -123,11 +113,9 @@ begin {
 process {
     Import-Module Veeam.Backup.PowerShell -WarningAction SilentlyContinue -ErrorAction Stop
 
-    $typeNorm = if ($Type) { $Type.ToLower() } else { $null }
-
-    # Determine job source: classic jobs or SureBackup jobs
     $AllJobs = @()
     $IsSureBackupMode = $false
+
     if ($typeNorm -eq "surebackup") {
         $IsSureBackupMode = $true
         $AllJobs = Get-VBRSureBackupJob
@@ -138,44 +126,41 @@ process {
     } else {
         $AllJobs = Get-VBRJob
         if (!$AllJobs) {
-            Write-Host "No jobs found in Veeam." -ForegroundColor Yellow
+            Write-Host "No classic jobs found in Veeam." -ForegroundColor Yellow
             exit 1
+        }
+        if ($typeNorm -ne "classic") {
+            # Specific classic type (backup, replica, backupcopy)
+            $AllJobs = $AllJobs | Where-Object { $_.JobType.ToLower() -eq $typeNorm }
+            if (!$AllJobs) {
+                Write-Host "No jobs of type '$Type' found in Veeam." -ForegroundColor Yellow
+                exit 1
+            }
         }
     }
 
     $TargetJobs = $AllJobs
 
-    # Filter by Type for classic jobs
-    if ($Type -and -not $IsSureBackupMode) {
-        $TypeTitle = (Get-Culture).TextInfo.ToTitleCase($Type.ToLower())
-        $TargetJobs = $TargetJobs | Where-Object { $_.JobType -eq $TypeTitle }
-        if ($TargetJobs.Count -eq 0) {
-            Write-Host "No jobs found matching type '$Type'." -ForegroundColor Yellow
-            exit 1
-        }
-    }
-
-    # Filter by JobNamesFromFile
+    # --- Apply -ListFile filter if specified ---
     if ($JobNamesFromFile.Count -gt 0) {
-        # Precheck non-existent job names
         foreach ($name in $JobNamesFromFile) {
+        # Print notice about non-existent job names
             if (-not ($AllJobs | Where-Object { $_.Name -eq $name })) {
-                Write-Host "- No such job: $name" -ForegroundColor Yellow
+                Write-Host "- No such job with the name: $name" -ForegroundColor Yellow
             }
         }
-
         $TargetJobs = $TargetJobs | Where-Object { $JobNamesFromFile -contains $_.Name }
         if ($TargetJobs.Count -eq 0) {
-            Write-Host "No jobs found matching the names in '$ListFilePath'." -ForegroundColor Yellow
+            Write-Host "No '$Type' type jobs matching the names in '$ListFilePath'." -ForegroundColor Yellow
             exit 1
         }
     }
 
-    # Filter by JobName
+    # --- Apply -JobName filter if specified ---
     if ($JobName) {
         $TargetJobs = $TargetJobs | Where-Object { $_.Name -eq $JobName }
         if ($TargetJobs.Count -eq 0) {
-            Write-Host "No job found with the name '$JobName'." -ForegroundColor Yellow
+            Write-Host "No '$Type' type job with the name '$JobName'." -ForegroundColor Yellow
             exit 1
         }
     }
@@ -185,11 +170,20 @@ process {
         exit 1
     }
 
-    # SureBackup-specific action logic
+    # --- Determine action ---
+    if ($Status) {
+        $Mode = "Status"
+    } elseif ($Enable) {
+        $Mode = "Enable"
+    } else {
+        $Mode = "Disable"
+    }
+
+    # --- SureBackup-specific logic ---
     if ($IsSureBackupMode) {
         switch ($Mode) {
             "Status" {
-                Write-Host "Status of the job(s):"
+                Write-Host "Status of the SureBackup job(s):"
                 $TargetJobs | ForEach-Object {
                     $jobStatus = if ($_.IsEnabled) { "Enabled" } else { "Disabled" }
                     Write-Host ("- {0}`t{1}" -f $_.Name, $jobStatus)
@@ -204,7 +198,6 @@ process {
                     exit 0
                 }
                 $TargetJobs | ForEach-Object {
-                    # Check if job is set to "Run automatically"
                     if (!$_.ScheduleEnabled) {
                         Write-Host ("Skipping '{0}': cannot {1}; 'Run automatically' is unchecked in Schedule." -f $_.Name, $Mode) -ForegroundColor Yellow
                         return
@@ -226,7 +219,6 @@ process {
                     exit 0
                 }
                 $TargetJobs | ForEach-Object {
-                    # Check if job is set to "Run automatically"
                     if (!$_.ScheduleEnabled) {
                         Write-Host ("Skipping '{0}': cannot {1}; 'Run automatically' is unchecked in Schedule." -f $_.Name, $Mode) -ForegroundColor Yellow
                         return
@@ -243,7 +235,7 @@ process {
         return
     }
 
-    # Classic job action logic
+    # --- Classic job action logic (includes "classic", "backup", "replica", "backupcopy") ---
     switch ($Mode) {
         "Status" {
             Write-Host "Status of the job(s):"
@@ -261,7 +253,6 @@ process {
                 exit 0
             }
             $TargetJobs | ForEach-Object {
-                # Check if job is set to "Run automatically"
                 if ($_.Options.JobOptions.RunManually) {
                     Write-Host ("Skipping '{0}': cannot {1}; 'Run automatically' is unchecked in Schedule." -f $_.Name, $Mode) -ForegroundColor Yellow
                     return
@@ -283,7 +274,6 @@ process {
                 exit 0
             }
             $TargetJobs | ForEach-Object {
-                # Check if job is set to "Run automatically"
                 if ($_.Options.JobOptions.RunManually) {
                     Write-Host ("Skipping '{0}': cannot {1}; 'Run automatically' is unchecked in Schedule." -f $_.Name, $Mode) -ForegroundColor Yellow
                     return
