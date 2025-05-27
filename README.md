@@ -46,13 +46,13 @@ The CSV output includes the following columns, which vary according to job type 
 | `TargetCluster`    | Target hypervisor cluster for the replica VM(s)                                                             | Replica            |
 | `TargetFolder`     | Target virtual machine folder for the replica VM(s)                                                         | Replica            |
 | `TargetDatastore`  | Target storage/datastore for the replica VM(s)                                                              | Replica            |
-| `RestorePoints`    | Number of restore points to keep (with unit: days/points)                                                   | All                |
+| `RestorePoints`    | Number of restore points to keep (with unit: days/points)                                                   | Backup, Replica    |
 | `IsScheduleEnabled`| `FALSE` indicates the job will not run automatically because it is disabled in the Jobs list pane.           | All                |
 | `RunAutomatically` | `FALSE` indicates the job will not run automatically because the “Run the job automatically” checkbox is unchecked on the Schedule page of the job configuration. | All                |
 | `DailyStartTime`   | Value present only if the “Daily” selector is checked in the Schedule page of the job configuration.         | All                |
 | `MonthlyStartTime` | Value present only if the “Monthly” selector is checked in the Schedule page of the job configuration.       | All                |
 | `Periodically`     | Value present only if the “Periodically” selector is checked in the Schedule page of the job configuration.  | Backup, Replica    |
-| `HourlyOffset`     | Value present only if the “Periodically” selector is checked in the Schedule page of the job configuration.  | Backup, Replica    |
+| `HourlyOffset`     | Time offset configured in the "Start time within an hour" field in the advanced option of the Periodic. Present only if “Periodically” is selected. | Backup, Replica    |
 | `AfterJob`         | Name of the job that triggers this job when it completes (“After the job” scheduling). Value present only if the selector is checked in the Schedule page. | All |
 | `IsRunning`        | Indicates whether the job is running at the time of report                                                  | All (`-Stat` only) |
 | `LastResult`       | Result of the last job session (Success, Warning, Failed, None)                                             | All (`-Stat` only) |
@@ -213,13 +213,13 @@ The `DisableVBRJob.ps1` script enables, disables, or checks the status of Veeam 
 
 #### The Role of `-Type` (and the meaning of "classic")
 
-**You MUST always specify `-Type`** to select which class of jobs are targeted for action.  
-- `"classic"` is a convenient umbrella invented for this script—it means “all operational jobs except SureBackup.”  
+**You MUST always specify `-Type`** to select which class of jobs are targeted for action.
+- `"classic"` is a convenient umbrella invented for this script—it means “all operational jobs except SureBackup.”
 - `"classic"` includes: backup, replica, backup copy (internally called `SimpleBackupCopyPolicy`), and other Veeam job types, but _excludes_ SureBackup jobs.
 - `"surebackup"` exclusively targets SureBackup jobs.
 - You may also specify a precise type (e.g., `"backup"`, `"replica"`, `"backupcopy"`).
 
-This design ensures that **only jobs matching the specified `-Type` are ever targeted, regardless of how you supply names or lists**. Thus, even if your list contains jobs of multiple types, or you use a broad selection, only those matching your chosen `-Type` will be acted upon.  
+This design ensures that **only jobs matching the specified `-Type` are ever targeted, regardless of how you supply names or lists**. Thus, even if your list contains jobs of multiple types, or you use a broad selection, only those matching your chosen `-Type` will be acted upon.
 This double-filtering logic provides strong safeguards and ensures that actions are always intentional.
 
 #### Job Selection Logic
@@ -252,7 +252,7 @@ This double-filtering logic provides strong safeguards and ensures that actions 
 - The script always prompts for confirmation before enabling or disabling jobs, listing all targeted jobs clearly.
 - Color-coded output and explicit messages help distinguish actions, skips, and errors.
 - Filtering is always an AND operation: e.g., `-Type classic -ListFile mylist.txt` means “all classic jobs **and** also present in `mylist.txt`.”
-- Using `-Type surebackup` will **never** match classic jobs, even if their names appear in a list file.
+- Using `-Type surebackup` will **never** match classic jobs, even if their names appear in a list file. Neither do SureBackup jobs if `-Type classic` is used.
 
 #### Usage Examples
 
@@ -268,8 +268,6 @@ This double-filtering logic provides strong safeguards and ensures that actions 
 
 # Disable all classic (non-SureBackup) jobs in the default list file
 .\DisableVBRJob.ps1 -Type classic -ListFile default
-
-# Attempting to disable a SureBackup job with -Type classic will do nothing, even if its name is in the list
 ```
 
 #### Best Practices and Safety Tips
