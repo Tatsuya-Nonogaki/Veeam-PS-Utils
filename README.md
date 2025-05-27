@@ -208,42 +208,80 @@ VBRJobWrapper.bat WeeklyBackup -o "-FullBackup -RetryBackup"
 ### 6. `DisableVBRJob.ps1`
 
 #### Overview
-The `DisableVBRJob.ps1` script enables, disables, or checks the status of Veeam Backup & Replication jobs. It supports targeting jobs by name, type, or a list file, and provides pre-checks for job existence and scheduling settings. This script is useful for maintenance, automation, or scheduled operational tasks.  
-**As of v0.2.0, the script is tested for both classic jobs (e.g., backup, replica) and SureBackup jobs (type: `surebackup`).**
 
-#### Key Features
-- Enables, disables, or checks the status of one or more Veeam jobs.
-- Target jobs by name (`-JobName`), type (`-Type`), or a list file (`-ListFile`).
-- Safeguards against conflicting parameters and missing or non-existent jobs.
-- Skips jobs not configured for automatic scheduling and informs the operator.
-- Provides clear, color-coded status and operation messages.
-- Combines multiple selection criteria with AND logic.
+The `DisableVBRJob.ps1` script enables, disables, or checks the status of Veeam Backup & Replication jobs in a safe, flexible, and auditable manner. It is designed for both broad and highly specific job selection, offering robust safeguards against accidental changes. **As of v0.3.x, the `-Type` parameter is mandatory and central to all job selection logic.**
+
+---
+
+#### The Role of `-Type` (and the meaning of "classic")
+
+**You MUST always specify `-Type`** to select which class of jobs are targeted for action.  
+- `"classic"` is a convenient umbrella invented for this script—it means “all operational jobs except SureBackup.”  
+- `"classic"` includes: backup, replica, backup copy (internally called `SimpleBackupCopyPolicy`), and other Veeam job types, but _excludes_ SureBackup jobs.
+- `"surebackup"` exclusively targets SureBackup jobs.
+- You may also specify a precise type (e.g., `"backup"`, `"replica"`, `"backupcopy"`).
+
+This design ensures that **only jobs matching the specified `-Type` are ever targeted, regardless of how you supply names or lists**. Thus, even if your list contains jobs of multiple types, or you use a broad selection, only those matching your chosen `-Type` will be acted upon.  
+This double-filtering logic provides strong safeguards and ensures that actions are always intentional.
+
+#### Job Selection Logic
+
+- **Filtering always starts with `-Type`.**
+  Only jobs of the specified type/class are considered for further selection.
+- **You may further narrow the scope** using:
+  - `-JobName` — one specific job (must still match the type).
+  - `-ListFile` — a text file with job names (one per line); only jobs of the specified type _and_ found in the list will be targeted.
+- This means you can use a single list file containing mixed job types, and safely operate only on the ones matching your `-Type` filter.
+- Alternatively, you may prepare separate list files for each type. If you accidentally use the wrong list with the wrong `-Type`, the script will safely filter out unmatched jobs, adding another safety net.
 
 #### Parameters
-- **`-ListFile` (Alias: `-f`)**: Reads a list of job names from a file. Use `'default'` to refer to the script's default list file. Cannot be combined with `-JobName`.
-- **`-JobName` (Alias: `-n`)**: Specifies a single job name directly. Cannot be combined with `-ListFile`.
-- **`-Type` (Alias: `-t`)**: Filters jobs by type (`backup`, `replica`, or `surebackup`).
-- **`-Disable` (Alias: `-d`)**: Disables the target jobs. Mutually exclusive with `-Enable` and `-Status`. Default if no action is specified.
-- **`-Enable` (Alias: `-e`)**: Enables the target jobs. Mutually exclusive with `-Disable` and `-Status`.
-- **`-Status` (Alias: `-s`)**: Shows the enable/disable status of the target jobs. Mutually exclusive with `-Enable` and `-Disable`.
+
+| Parameter   | Alias | Required | Description |
+|-------------|-------|----------|-------------|
+| `-Type`     | `-t`  | Yes      | Job type to target: `"classic"`, `"surebackup"`, or a specific classic job type (`"backup"`, `"replica"`, `"backupcopy"`).<br>- `"classic"` = all non-SureBackup jobs.<br>- `"surebackup"` = only SureBackup jobs.<br>- Specific types = only jobs of that type. |
+| `-JobName`  | `-n`  | No*      | Name of a single job to target. Cannot be combined with `-ListFile`. The job must also match `-Type`. |
+| `-ListFile` | `-f`  | No*      | Path to file containing job names (one per line). Use `"default"` to use `joblist.txt` in the script directory. Cannot be used with `-JobName`. Only jobs matching both the list and type will be targeted. |
+| `-Disable`  | `-d`  | No       | Disable the selected jobs. Mutually exclusive with `-Enable` and `-Status`. **Default action if none is specified.** |
+| `-Enable`   | `-e`  | No       | Enable the selected jobs. Mutually exclusive with `-Disable` and `-Status`. |
+| `-Status`   | `-s`  | No       | Show the enable/disable status of the selected jobs. Mutually exclusive with `-Disable` and `-Enable`. |
+
+> \* At least one of `-Type`, `-JobName`, or `-ListFile` **must** be used to select jobs, but `-Type` is always required.
 
 #### Behavior Notes
-- If a job's "Run automatically" option is not checked in its Schedule settings, enabling/disabling has no effect and the script will skip the job with a clear informational message.
-- Jobs can be targeted with multiple filters, but at least one of `-ListFile`, `-JobName`, or `-Type` must be used.
-- The script handles all necessary checks before performing any job modifications.
+
+- If a job’s **“Run automatically”** option is not enabled in its schedule, enabling or disabling has no effect (the job is skipped with a warning).  
+  _Exception: This skip logic does **not** apply to Backup Copy jobs (`backupcopy`, Veeam type `SimpleBackupCopyPolicy`), as these jobs operate on a “backup window” basis (either “always” or a specific time window) and do not have a “Run automatically” toggle or standard schedule option._
+- The script always prompts for confirmation before enabling or disabling jobs, listing all targeted jobs clearly.
+- Color-coded output and explicit messages help distinguish actions, skips, and errors.
+- Filtering is always an AND operation: e.g., `-Type classic -ListFile mylist.txt` means “all classic jobs **and** also present in `mylist.txt`.”
+- Using `-Type surebackup` will **never** match classic jobs, even if their names appear in a list file.
 
 #### Usage Examples
+
 ```powershell
-# Disable all backup jobs listed in a file
-.\DisableVBRJob.ps1 -ListFile jobs_to_disable.txt -Type backup -Disable
+# Disable all backup jobs listed in a file (only classic backup jobs in the list will be targeted)
+.\DisableVBRJob.ps1 -Type backup -ListFile jobs_to_disable.txt -Disable
 
-# Enable a single job by name
-.\DisableVBRJob.ps1 -JobName "WeeklyReplication" -Enable
+# Enable a single replica job by name
+.\DisableVBRJob.ps1 -Type replica -JobName "WeeklyReplication" -Enable
 
-# Show the status of all SureBackup jobs
+# Show status of all SureBackup jobs
 .\DisableVBRJob.ps1 -Type surebackup -Status
+
+# Disable all classic (non-SureBackup) jobs in the default list file
+.\DisableVBRJob.ps1 -Type classic -ListFile default
+
+# Attempting to disable a SureBackup job with -Type classic will do nothing, even if its name is in the list
 ```
 
+---
+
+#### Best Practices and Safety Tips
+
+- You may use a single, master list file for all job names—let `-Type` do the safe filtering for you!
+- If you prefer, you can use separate list files per job type; even then, `-Type` acts as a failsafe against accidental cross-type operations.
+- **Safety workflow:** Before making changes, run the script with `-Status` and your intended selection parameters to preview the jobs that would be affected. This lets you confirm that your `-Type` and list file selections are correct—especially valuable in production!
+- Always review the confirmation prompt and the displayed job list before approving changes—this is your last line of defense for production safety.
 ---
 
 ## Contribution
