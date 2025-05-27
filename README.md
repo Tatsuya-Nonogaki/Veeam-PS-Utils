@@ -9,53 +9,68 @@ Welcome to the **Veeam PowerShell Utilities** repository! This collection of Pow
 ### 1. `JobList.ps1`
 
 #### Overview
-The `JobList.ps1` script outputs a list of Veeam Backup and Replication jobs to a CSV file. It provides major properties of each job, enabling backup administrators to easily analyze and manage their configurations.
+The `JobList.ps1` script outputs a comprehensive list of Veeam Backup & Replication jobs to a CSV file. It supports classic job types (`backup`, `replica`) as well as `SureBackup` jobs, making it easy for backup administrators to analyze, audit, or document Veeam job configurations and operational status.
 
 #### Key Features
-- Outputs job information to a CSV file.
-- Supports filtering jobs by type (`backup` or `replica`).
-- Outputs fields dynamically based on the job type.
-- Includes additional job status information when the `-Stat` parameter is specified.
+- Exports detailed job information in CSV format for easy review and further analysis.
+- Supports filtering by job type: `backup`, `replica`, or `surebackup`.
+- Dynamically adapts output fields and logic depending on the selected job type.
+- Optionally includes current job status and last session statistics with the `-Stat` parameter.
+- Output file location is flexible and defaults intelligently based on job type.
+- Designed to be robust and informative, with clear messages when no jobs match the specified criteria.
 
 #### Parameters
-- **`-Type` (Alias: `-t`)** (Mandatory):
-  Specifies the type of job to list. Must be either `backup` or `replica` for the time being.
 
-- **`-Log` (Alias: `-l`)**:
-  Specifies the output file path. Defaults to `joblist-{Type}.csv` in the script's directory if not provided.
+- **`-Type` (Alias: `-t`)** (Mandatory):  
+  Specifies the type of job to list. Must be `backup`, `replica`, or `surebackup`.
 
-- **`-Stat` (Alias: `-s`)**:
-  Includes additional status-related columns such as `IsRunning`, `LastResult`, `SessionStart`, `SessionEnd`, and `Duration` in the output.
+- **`-Log` (Alias: `-l`)**:  
+  Specifies the CSV output file path. If not provided, defaults to `joblist-{type}.csv` in the script's directory.  
+  If no path separator (`\`) is present, the file is created in the script directory.
+
+- **`-Stat` (Alias: `-s`)**:  
+  When used, adds status/session columns to the CSV, such as `IsRunning`, `LastResult`, `SessionStart`, `SessionEnd`, and `Duration`.
 
 #### Output Fields
-The CSV output consists of the following fields:
 
-| Field              | Description                                                                 |
-|--------------------|-----------------------------------------------------------------------------|
-| `Name`             | Job Name.                                                                   |
-| `JobType`          | Type of job (e.g., Backup, Replica).                                        |
-| `Description`      | Description of the job.                                                     |
-| `Sources`          | Source objects of the backup/replication job.                               |
-| `TargetRepository` | (Backup only) Target repository for backups.                                |
-| `TargetCluster`    | (Replica only) Target cluster for replication.                              |
-| `TargetFolder`     | (Replica only) Target folder for replication.                               |
-| `TargetDatastore`  | (Replica only) Target datastore for replication.                            |
-| `RestorePoints`    | Number of restore points to keep.                                           |
-| `IsScheduleEnabled`| Indicates if the job is enabled.                                            |
-| `RunAutomatically` | Indicates if the job runs automatically based on its configuration.         |
-| `DailyStartTime`   | Configured daily start time (if applicable).                                |
-| `Periodically`     | Interval for periodic execution (if applicable).                            |
-| `HourlyOffset`     | Time offset within an hour for periodic schedules (if applicable).          |
-| `IsRunning`        | (Optional, with `-Stat`) Indicates if the job is running.                   |
-| `LastResult`       | (Optional, with `-Stat`) Result of the last job session.                    |
-| `SessionStart`     | (Optional, with `-Stat`) Start timestamp of the last session.               |
-| `SessionEnd`       | (Optional, with `-Stat`) End timestamp of the last session.                 |
-| `Duration`         | (Optional, with `-Stat`) Duration of the last job.                          |
+The CSV output includes the following columns, which vary according to job type and the use of `-Stat`:
 
-#### Usage Example
+| Field              | Description                                                                                                 | Applies to         |
+|--------------------|-------------------------------------------------------------------------------------------------------------|--------------------|
+| `Name`             | Job name                                                                                                    | All                |
+| `JobType`          | Backup, Replica, or SureBackup                                                                              | All                |
+| `Description`      | Description field of the job                                                                                | All                |
+| `Sources`          | Source objects (for SureBackup, replaced by `LinkedJob`)                                                    | Backup, Replica    |
+| `LinkedJob`        | Linked job(s) for SureBackup jobs                                                                           | SureBackup         |
+| `TargetRepository` | Target repository for backup jobs                                                                           | Backup             |
+| `TargetCluster`    | Target hypervisor cluster for the replica VM(s)                                                             | Replica            |
+| `TargetFolder`     | Target virtual machine folder for the replica VM(s)                                                         | Replica            |
+| `TargetDatastore`  | Target storage/datastore for the replica VM(s)                                                              | Replica            |
+| `RestorePoints`    | Number of restore points to keep (with unit: days/points)                                                   | All                |
+| `IsScheduleEnabled`| `FALSE` indicates the job will not run automatically because it is disabled in the Jobs list pane.           | All                |
+| `RunAutomatically` | `FALSE` indicates the job will not run automatically because the “Run the job automatically” checkbox is unchecked on the Schedule page of the job configuration. | All                |
+| `DailyStartTime`   | Value present only if the “Daily” selector is checked in the Schedule page of the job configuration.         | All                |
+| `MonthlyStartTime` | Value present only if the “Monthly” selector is checked in the Schedule page of the job configuration.       | All                |
+| `Periodically`     | Value present only if the “Periodically” selector is checked in the Schedule page of the job configuration.  | Backup, Replica    |
+| `HourlyOffset`     | Value present only if the “Periodically” selector is checked in the Schedule page of the job configuration.  | Backup, Replica    |
+| `AfterJob`         | Name of the job that triggers this job when it completes (“After the job” scheduling). Value present only if the selector is checked in the Schedule page. | All |
+| `IsRunning`        | Indicates whether the job is running at the time of report                                                  | All (`-Stat` only) |
+| `LastResult`       | Result of the last job session (Success, Warning, Failed, None)                                             | All (`-Stat` only) |
+| `SessionStart`     | Start time of the last job session                                                                          | All (`-Stat` only) |
+| `SessionEnd`       | End time of the last job session                                                                            | All (`-Stat` only) |
+| `Duration`         | Duration of the last job session                                                                            | All (`-Stat` only) |
+
+#### Usage Examples
+
 ```powershell
-# Output backup jobs to a CSV file with additional status information
-.\JobList.ps1 -Type backup -Log backup_jobs.csv -Stat
+# Output all backup jobs to CSV including job status/session columns (relative path)
+.\JobList.ps1 -Type backup -Log .\backup_jobs.csv -Stat
+
+# Output all replica jobs to the default CSV file (no status columns)
+.\JobList.ps1 -Type replica
+
+# Output all SureBackup jobs to a custom path, with status columns
+.\JobList.ps1 -Type surebackup -Log "C:\Reports\surebackup_jobs.csv" -Stat
 ```
 
 ---
