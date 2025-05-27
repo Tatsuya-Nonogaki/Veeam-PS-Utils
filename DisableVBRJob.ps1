@@ -253,6 +253,7 @@ process {
                 $jobStatus = if ($_.IsScheduleEnabled) { "Enabled" } else { "Disabled" }
                 Write-Host ("- {0}`t{1}" -f $_.Name, $jobStatus)
             }
+            Write-Host ("Matched: {0} job(s)" -f $TargetJobs.Count)
         }
         "Disable" {
             Write-Host "Disable the following job(s):"
@@ -262,6 +263,7 @@ process {
                 Write-Host "Operation cancelled." -ForegroundColor Yellow
                 exit 0
             }
+            $ProcessedCount = 0
             $TargetJobs | ForEach-Object {
                 if ($_.Options.JobOptions.RunManually) {
                     Write-Host ("Skipping '{0}': cannot {1}; 'Run automatically' is unchecked in Schedule." -f $_.Name, $Mode) -ForegroundColor Yellow
@@ -270,10 +272,12 @@ process {
                 try {
                     Disable-VBRJob -Job $_ -ErrorAction Stop | Out-Null
                     Write-Host "Disabled: $($_.Name)"
+                    $ProcessedCount++
                 } catch {
                     Write-Warning "Failed to disable: $($_.Name) - $_"
                 }
             }
+            Write-Host ("Processed: {0} of {1} matched job(s)" -f $ProcessedCount, $TargetJobs.Count)
         }
         "Enable" {
             Write-Host "Enable the following job(s):"
@@ -283,6 +287,7 @@ process {
                 Write-Host "Operation cancelled." -ForegroundColor Yellow
                 exit 0
             }
+            $ProcessedCount = 0
             $TargetJobs | ForEach-Object {
                 if ($_.Options.JobOptions.RunManually) {
                     Write-Host ("Skipping '{0}': cannot {1}; 'Run automatically' is unchecked in Schedule." -f $_.Name, $Mode) -ForegroundColor Yellow
@@ -291,10 +296,12 @@ process {
                 try {
                     Enable-VBRJob -Job $_ -ErrorAction Stop | Out-Null
                     Write-Host "Enabled: $($_.Name)"
+                    $ProcessedCount++
                 } catch {
                     Write-Warning "Failed to enable: $($_.Name) - $_"
                 }
             }
+            Write-Host ("Processed: {0} of {1} matched job(s)" -f $ProcessedCount, $TargetJobs.Count)
         }
     }
 }
