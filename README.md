@@ -211,8 +211,6 @@ VBRJobWrapper.bat WeeklyBackup -o "-FullBackup -RetryBackup"
 
 The `DisableVBRJob.ps1` script enables, disables, or checks the status of Veeam Backup & Replication jobs in a safe, flexible, and auditable manner. It is designed for both broad and highly specific job selection, offering robust safeguards against accidental changes. **As of v0.3.x, the `-Type` parameter is mandatory and central to all job selection logic.**
 
----
-
 #### The Role of `-Type` (and the meaning of "classic")
 
 **You MUST always specify `-Type`** to select which class of jobs are targeted for action.  
@@ -274,14 +272,13 @@ This double-filtering logic provides strong safeguards and ensures that actions 
 # Attempting to disable a SureBackup job with -Type classic will do nothing, even if its name is in the list
 ```
 
----
-
 #### Best Practices and Safety Tips
 
 - You may use a single, master list file for all job names—let `-Type` do the safe filtering for you!
 - If you prefer, you can use separate list files per job type; even then, `-Type` acts as a failsafe against accidental cross-type operations.
 - **Safety workflow:** Before making changes, run the script with `-Status` and your intended selection parameters to preview the jobs that would be affected. This lets you confirm that your `-Type` and list file selections are correct—especially valuable in production!
 - Always review the confirmation prompt and the displayed job list before approving changes—this is your last line of defense for production safety.
+
 ---
 
 ## Contribution
