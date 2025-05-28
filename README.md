@@ -1,4 +1,4 @@
-# [Veeam PowerShell Utilities](https://github.com/Tatsuya-Nonogaki/Veeam-PS-Utils)
+# [Veeam-PS-Utils](https://github.com/Tatsuya-Nonogaki/Veeam-PS-Utils)
 
 Welcome to the **Veeam PowerShell Utilities** repository! This collection of PowerShell scripts and supplementary tools is designed to simplify and enhance the management of Veeam Backup and Replication jobs.
 
