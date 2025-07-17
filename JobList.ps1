@@ -4,7 +4,7 @@
 
  .DESCRIPTION
   Output Job List to a CSV file.
-  Version: 0.4.1
+  Version: 0.4.2
 
   The output CSV consists of the following fields.
   Fields may vary depending on the job 'Type' argument.
@@ -80,7 +80,10 @@
 
  .PARAMETER Stat
   (Alias -s) Let the output include status related columns, i.e., IsRunning, LastResult, 
-  SessionStart, SessionEnd and Duration. 
+  SessionStart, SessionEnd and Duration.
+
+ .PARAMETER Sort
+  Sort the list by Job Name to ensure a consistent order.
 #>
 [CmdletBinding()]
 Param(
@@ -95,7 +98,10 @@ Param(
 
   [Parameter()]
   [Alias("s")]
-  [switch]$Stat
+  [switch]$Stat,
+
+  [Parameter()]
+  [switch]$Sort
 )
 
 # Output file name, where the placeholder '%' is replaced by Type parameter.
@@ -343,6 +349,9 @@ if ($Type -eq "surebackup") {
     $jobs = Get-VBRSureBackupJob
     if ($jobs) {
         $jobData = $jobs | ForEach-Object { Get-SureBackupJobData -job $_ -Stat:($Stat) }
+        if ($Sort) {
+            $jobData = $jobData | Sort-Object -Property Name -CaseSensitive
+        }
         $jobData | Export-Csv -Path $logfile -Encoding UTF8 -NoTypeInformation
     } else {
         Write-Host "No SureBackup jobs found"
@@ -362,6 +371,9 @@ if ($Type -eq "surebackup") {
         }
 
         $jobData = $filteredJobs | ForEach-Object { Get-JobData -job $_ -Type $Type }
+        if ($Sort) {
+            $jobData = $jobData | Sort-Object -Property Name -CaseSensitive
+        }
         $jobData | Export-Csv -Path $logfile -Encoding UTF8 -NoTypeInformation
     } else {
         Write-Host "No Job output"

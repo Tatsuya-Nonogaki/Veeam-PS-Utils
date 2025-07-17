@@ -31,6 +31,9 @@ The `JobList.ps1` script outputs a comprehensive list of Veeam Backup & Replicat
 - **`-Stat` (Alias: `-s`)**:  
   When used, adds status/session columns to the CSV, such as `IsRunning`, `LastResult`, `SessionStart`, `SessionEnd`, and `Duration`.
 
+- **`-Sort`**:  
+  Sort the list by Job Name to ensure a consistent order.
+
 #### Output Fields
 
 The CSV output includes the following columns, which vary according to job type and the use of `-Stat`:
