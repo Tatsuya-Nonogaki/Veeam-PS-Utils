@@ -83,7 +83,7 @@
   SessionStart, SessionEnd and Duration.
 
  .PARAMETER Sort
-  Sort the list by Job Name.
+  Sort the list by Job Name to ensure a consistent order.
 #>
 [CmdletBinding()]
 Param(
