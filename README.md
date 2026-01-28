@@ -6,6 +6,29 @@ Welcome to the **Veeam-PS-Utils** repository! This collection of PowerShell scri
 
 ## Scripts Included
 
+1. [JobList.ps1](#1-joblistps1)
+   Exports a comprehensive list of Veeam Backup & Replication jobs (`backup`, `replica`, and `SureBackup`) to a CSV file, helping you review, organize, and document your current job configuration.
+
+2. [JobStatus.ps1](#2-jobstatusps1)
+   Retrieves the last result of a specified VBR job. It supports logging and provides exit codes for easy integration with monitoring systems.
+
+3. [VBRStatusWrapper.bat](#3-vbrstatuswrapperbat)
+   Wrapper for `JobStatus.ps1` to facilitate exit code retrieval in batch environments for seamless integration with batch files and monitoring systems.
+
+4. [RunVBRJob.ps1](#4-runvbrjobps1)
+   Starts a specified VBR job and retrieves its result; designed to work smoothly with external monitoring systems and job schedulers.
+
+5. [VBRJobWrapper.bat](#5-vbrjobwrapperbat)
+   Wrapper for `RunVBRJob.ps1` to facilitate execution in batch environments, capturing and propagating exit codes to the calling process such as external monitoring systems or job schedulers.
+
+6. [DisableVBRJob.ps1](#6-disablevbrjobps1)
+   Enables, disables, or reports the enabled/disabled status of VBR jobs, with flexible filtering by job type (e.g., `backup`, `replica`) and job name.  
+   Job names can be supplied via a list file, enabling controlled, repeatable changes and ensuring you can re‑enable exactly the same set of jobs later.
+
+---
+
+## Script Details
+
 ### 1. `JobList.ps1`
 
 #### Overview
